@@ -1,0 +1,197 @@
+Initializing MUZE AST Parser...
+Successfully parsed embedded sandbox_safe.zig. Total tokens: 2097
+[BIOLOGICAL FAULT INJECTED] BWT 0-to-1 Index Fault
+   -> Pattern: ( sp - 1 ) 
+[BIOLOGICAL FAULT INJECTED] BWT Exclusive Bounds
+   -> Pattern: ] - 1 
+[BIOLOGICAL FAULT INJECTED] Reverse Complement Bias
+   -> Pattern: ~ base 
+[BIOLOGICAL FAULT INJECTED] Canonical Strand Bias Injection
+   -> Pattern: kmer < rc 
+[BIOLOGICAL FAULT INJECTED] Phylogenetic Depth Truncation 1
+   -> Pattern: tree [ u ] . depth > tree [ v ] . depth 
+[BIOLOGICAL FAULT INJECTED] Phylogenetic Depth Truncation 2
+   -> Pattern: tree [ v ] . depth > tree [ u ] . depth 
+[BIOLOGICAL FAULT INJECTED] LCA Early Termination
+   -> Pattern: u != v 
+[BIOLOGICAL FAULT INJECTED] Periodic Boundary Violation
+   -> Pattern: dx -= 
+[BIOLOGICAL FAULT INJECTED] Steric Collapse
+   -> Pattern: total_energy += 
+[BIOLOGICAL FAULT INJECTED] Minimizer Initialization Fault
+   -> Pattern: std . math . maxInt 
+[BIOLOGICAL FAULT INJECTED] Sliding Window Truncation
+   -> Pattern: j <= w - k 
+[BIOLOGICAL FAULT INJECTED] Minimizer Hash Avalanche Corruption
+   -> Pattern: hash >> 15 
+[BIOLOGICAL FAULT INJECTED] Minimizer Initialization Fault
+   -> Pattern: std . math . maxInt 
+[BIOLOGICAL FAULT INJECTED] Kraken2 LCA Monotonicity Fault
+   -> Pattern: a > b 
+[BIOLOGICAL FAULT INJECTED] Kraken2 Reading Frame Shift
+   -> Pattern: i % 3 
+[BIOLOGICAL FAULT INJECTED] Kraken2 Junk DNA Masking Threshold Fault
+   -> Pattern: * 10 > threshold 
+
+Phase 1, 2, & 3 Complete. Generated 16 biological mutants in tmp/.
+
+[TCE FILTER] Establishing LLVM-IR Machine Code Baseline...
+
+[SUPERVISOR] Commencing Differential POSIX Executions...
+
+=== Testing Domain 1 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 62702 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 1: [KILLED] Exited with error code 134
+sh: line 1: 62715 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 2: [KILLED] Exited with error code 134
+sh: line 1: 62727 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 3: [KILLED] Exited with error code 134
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 62741 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 5: [KILLED] Exited with error code 134
+sh: line 1: 62751 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 6: [KILLED] Exited with error code 134
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 62765 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 8: [KILLED] Exited with error code 134
+sh: line 1: 62776 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 9: [KILLED] Exited with error code 134
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 62794 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 11: [KILLED] Exited with error code 134
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 62818 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 13: [KILLED] Exited with error code 134
+sh: line 1: 62828 Abort trap: 6           perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 14: [KILLED] Exited with error code 134
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 2 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 1540447771)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 1540447773)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 5: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 50477392783746)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 1540447777)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 3 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 5: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 3)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 4 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 63133 Alarm clock: 14         perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 5: [KILLED] Watchdog Timeout (124)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 0)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 5 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 75)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 5: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 30)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 6 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 5: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 63445 Alarm clock: 14         perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 13: [KILLED] Watchdog Timeout (124)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 7 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+sh: line 1: 63507 Alarm clock: 14         perl -e 'alarm 1; exec @ARGV' ./tmp/mutant_exe < tmp/payload.bin > tmp/result.bin 2> /dev/null
+  -> Mutant 5: [KILLED] Watchdog Timeout (124)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 12)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 6)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+
+=== Testing Domain 8 ===
+  -> Mutant 0: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 1: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 2: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 3: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 4: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 5: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 6: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 7: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 8: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 9: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 10: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 11: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 12: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
+  -> Mutant 13: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 14: [SURVIVED] Silent Biological Failure! (Result: 1)
+  -> Mutant 15: [DISCARDED] TCE Ghost Mutant (Optimized out by compiler)
