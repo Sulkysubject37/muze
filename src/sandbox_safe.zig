@@ -19,12 +19,17 @@ pub fn bwt_backward_search(
     sp_out: *u32,
     ep_out: *u32,
 ) void {
-    var sp: u32 = 0;
-    var ep: u32 = @intCast(bwt_len - 1);
-    var i: i32 = @intCast(pattern.len - 1);
+        if (bwt_len == 0) {
+        sp_out.* = 0;
+        ep_out.* = 0;
+        return;
+    }
+	var sp: u32 = 0;
+    	var ep: u32 = @intCast(bwt_len - 1);
+    	var i: i32 = @intCast(pattern.len - 1);
 
     while (sp <= ep and i >= 0) : (i -= 1) {
-        const c = pattern[@intCast(i)];
+        const c: u32 = @intCast((pattern[@intCast(i)] >> 1) & 3);
         const occ_sp = if (sp == 0) 0 else occ_table[(sp - 1) * 4 + c];
         sp = count_table[c] + occ_sp;
         ep = count_table[c] + occ_table[ep * 4 + c] - 1;
@@ -67,15 +72,10 @@ pub const TreeNode = struct {
 pub fn get_lca(u_in: u32, v_in: u32, tree: []const TreeNode) u32 {
     var u = u_in;
     var v = v_in;
-    while (tree[u].depth > tree[v].depth) {
-        u = tree[u].parent;
-    }
-    while (tree[v].depth > tree[u].depth) {
-        v = tree[v].parent;
-    }
+    if (u == 0 or v == 0) return if (u != 0) u else v;
     while (u != v) {
-        u = tree[u].parent;
-        v = tree[v].parent;
+        if (u > v) u = tree[u].parent
+        else       v = tree[v].parent;
     }
     return u;
 }
@@ -201,7 +201,15 @@ pub fn main() !void {
         // Run BWA
         var sp: u32 = 0;
         var ep: u32 = 0;
-        bwt_backward_search("ACGT", &[_]u32{0, 1, 2, 3}, &[_]u32{0,0,0,0,0}, 4, &sp, &ep);
+        const count_table = [_]u32{ 0, 1, 2, 3 };
+        // occ_table must be bwt_len * 4 entries. bwt_len = 4 → 16 entries minimum.
+        const occ_table = [_]u32{
+            0, 0, 0, 0, // row 0
+            0, 0, 0, 0, // row 1
+            0, 0, 0, 0, // row 2
+            0, 0, 0, 0, // row 3
+        };
+        bwt_backward_search("ACGT", &count_table, &occ_table, 4, &sp, &ep);
         packet.payload_u64 = sp;
     } else if (packet.domain_id == 2) {
         // Run Kraken minimizer
@@ -231,12 +239,15 @@ pub fn main() !void {
         const kmer = encode_kmer(seq, 4);
         const result = get_canonical_kmer(kmer, 4);
         packet.payload_u64 = result;
-    }
-
-    // Write the modified packet back
-    if (packet.domain_id == 6) {
-        const tree = [_]TreeNode{ .{ .parent = 0, .depth = 0 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 1, .depth = 2 }, .{ .parent = 1, .depth = 2 } };
-        packet.payload_u64 = kraken2_lca(3, 4, &tree);
+    } else if (packet.domain_id == 6) {
+        const tree = [_]TreeNode{
+            .{ .parent = 0, .depth = 0 },
+            .{ .parent = 0, .depth = 1 },
+            .{ .parent = 0, .depth = 1 },
+            .{ .parent = 1, .depth = 2 },
+            .{ .parent = 1, .depth = 2 },
+        };
+        packet.payload_u64 = get_lca(3, 4, &tree);
     } else if (packet.domain_id == 7) {
         packet.payload_u64 = kraken2_translate(12);
     } else if (packet.domain_id == 8) {
@@ -247,22 +258,33 @@ pub fn main() !void {
         packet.payload_u64 = jellyfish_bloom_filter(packet.payload_u64);
     } else if (packet.domain_id == 11) {
         packet.payload_u64 = jellyfish_cas_counter(packet.payload_u64);
+    } else if (packet.domain_id == 12) {
+        packet.payload_u64 = kallisto_ec_intersect(0xF0F0, 0xAAAA);
+    } else if (packet.domain_id == 13) {
+        packet.payload_f64_1 = kallisto_em_noise_truncate(0.05, 0.05);
+    } else if (packet.domain_id == 14) {
+        packet.payload_f64_1 = kallisto_effective_length_normalize(100.0, 0.5);
+    } else if (packet.domain_id == 15) {
+        packet.payload_u64 = kallisto_kmer_odd_constraint(31);
+    } else if (packet.domain_id == 16) {
+        packet.payload_u64 = kallisto_strand_flip(0x12345678, false);
+    } else if (packet.domain_id == 17) {
+        packet.payload_u64 = kallisto_umi_match(1, 1);
+    } else if (packet.domain_id == 18) {
+        packet.payload_u64 = samtools_bed_overlap(5, 0, 5);
+    } else if (packet.domain_id == 19) {
+        packet.payload_u64 = samtools_vcf_coordinate(100);
+    } else if (packet.domain_id == 20) {
+        packet.payload_u64 = samtools_is_reverse(0);
+    } else if (packet.domain_id == 21) {
+        packet.payload_u64 = samtools_iupac_match(15, 15);
+    } else if (packet.domain_id == 22) {
+        packet.payload_u64 = samtools_unclipped_pos(100, 10, true);
+    } else if (packet.domain_id == 23) {
+        packet.payload_u64 = samtools_proper_pair(0, 0);
     }
 
     _ = write(1, std.mem.asBytes(&packet).ptr, @sizeOf(MuzeIpcPacket));
-}
-pub fn kraken2_lca(a_in: u32, b_in: u32, tree: []const TreeNode) u32 {
-    var a = a_in;
-    var b = b_in;
-    if (a == 0 or b == 0) return if (a != 0) a else b;
-    while (a != b) {
-        if (a > b) {
-            a = tree[a].parent;
-        } else {
-            b = tree[b].parent;
-        }
-    }
-    return a;
 }
 
 pub fn kraken2_translate(seq_len: usize) u32 {
@@ -308,4 +330,96 @@ pub fn jellyfish_cas_counter(val: u64) u64 {
         count += 1;
     }
     return count;
+}
+
+// --- Kallisto ---
+
+pub fn kallisto_ec_intersect(read_set: u32, ec_set: u32) u32 {
+    var result: u32 = 0;
+    var i: u6 = 0;
+    while (i < 32) : (i += 1) {
+        const mask: u32 = @as(u32, 1) << @as(u5, @intCast(i));
+        if ((read_set & mask) != 0 and (ec_set & mask) != 0) {
+            result |= mask;
+        }
+    }
+    return result;
+}
+
+pub fn kallisto_em_noise_truncate(prob: f64, noise_limit: f64) f64 {
+    if (prob < noise_limit) {
+        return 0.0;
+    }
+    return prob;
+}
+
+pub fn kallisto_effective_length_normalize(count: f64, eff_len_in: f64) f64 {
+    var eff_len = eff_len_in;
+    if (eff_len < 1.0) {
+        eff_len = 1.0;
+    }
+    return count / eff_len;
+}
+
+pub fn kallisto_kmer_odd_constraint(k: u32) u8 {
+    if (k % 2 != 0 and k >= 3) {
+        return 1;
+    }
+    return 0;
+}
+
+pub fn kallisto_strand_flip(pos: u32, forward: bool) u32 {
+    var packed_pos: u32 = pos & 0x7FFFFFFF;
+    if (!forward) {
+        packed_pos |= 0x80000000;
+    }
+    return packed_pos;
+}
+
+pub fn kallisto_umi_match(dist: u32, threshold: u32) u8 {
+    if (dist <= threshold) {
+        return 1;
+    }
+    return 0;
+}
+
+// --- SAMtools ---
+
+pub fn samtools_bed_overlap(pos: u32, beg: u32, end: u32) u8 {
+    if (pos >= beg and pos < end) {
+        return 1;
+    }
+    return 0;
+}
+
+pub fn samtools_vcf_coordinate(pos: u32) u32 {
+    return pos + 1;
+}
+
+pub fn samtools_is_reverse(flag: u32) u8 {
+    if ((flag & 0x10) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+pub fn samtools_iupac_match(c1: u8, c2: u8) u8 {
+    if (c1 == c2 and c2 != 15) {
+        return 1;
+    }
+    return 0;
+}
+
+pub fn samtools_unclipped_pos(pos: u32, clip_len: u32, use_unclipped: bool) u32 {
+    if (use_unclipped) {
+        return pos - clip_len;
+    }
+    return pos;
+}
+
+pub fn samtools_proper_pair(flag1: u32, flag2: u32) u8 {
+    if ((flag1 & 0x10) == 0 and (flag2 & 0x10) != 0) {
+        return 1;
+    }
+    return 0;
 }
