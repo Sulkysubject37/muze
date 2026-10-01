@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <math.h>
 
 // IPC Binary Structs (The ABI)
 #pragma pack(push, 1)
@@ -272,6 +273,197 @@ double bwa_insert_lower_bound(double p25, double p75, double bound) {
     return p25 - bound * (p75 - p25);
 }
 
+// --- Salmon ---
+
+uint32_t salmon_rc_index(uint32_t idx, uint32_t seq_len) {
+    return seq_len - 1 - idx;
+}
+
+uint8_t salmon_ec_filter(uint8_t is_compat) {
+    if (is_compat == 1) {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t salmon_em_converged(double alpha, double cutoff) {
+    if (alpha > cutoff) {
+        return 1;
+    }
+    return 0;
+}
+
+uint32_t salmon_rad_pack(uint32_t tid, uint32_t ori_fw) {
+    return tid | (ori_fw << 1);
+}
+
+uint8_t salmon_mask_base(uint8_t base) {
+    if (base >= 65 && base <= 84) {
+        return base;
+    }
+    return 78;
+}
+
+uint8_t salmon_cigar_state(uint8_t op) {
+    if (op == 1) {
+        return 3;
+    }
+    return op;
+}
+
+// --- GROMACS ---
+
+double gromacs_leapfrog_step(double x, double v, double dt) {
+    return x + v * dt;
+}
+
+double gromacs_vrescale_lambda(double ek_new, double ek) {
+    return sqrt(ek_new / ek);
+}
+
+double gromacs_pbc_wrap(double x, double inv_box) {
+    double shift = floor(x * inv_box);
+    return x - shift / inv_box;
+}
+
+uint32_t gromacs_halo_buffer_size(uint32_t num) {
+    return num + 1;
+}
+
+double gromacs_fudge_qq(double raw_qq, double fudge) {
+    return raw_qq * fudge;
+}
+
+double gromacs_spring_force(double k, double dev) {
+    return -k * dev;
+}
+
+// --- Foldseek ---
+
+double foldseek_cbeta_geometry(double u1, double u2) {
+    return -0.333333 * u1 + 0.5 * u2;
+}
+
+uint8_t foldseek_lddt_inclusion(double distance, uint32_t row, uint32_t col) {
+    if (distance < 15.0 && col != row) {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t foldseek_tm_filter(int32_t i, double d, double score_d8) {
+    if (i >= 0 || d <= score_d8) {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t foldseek_gap_penalty_sat(uint8_t vH, uint8_t vGapO) {
+    if (vH < vGapO) {
+        return 0;
+    }
+    return vH - vGapO;
+}
+
+uint8_t foldseek_bfactor_mask(double bfactor, double threshold) {
+    if (bfactor < threshold) {
+        return 1;
+    }
+    return 0;
+}
+
+double foldseek_evalue_mu(double nn_out) {
+    return nn_out * 0.175 + 0.5;
+}
+
+// --- RAxML ---
+
+uint8_t raxml_freq_invalid(double base_freq) {
+    if (base_freq < 0.0 || base_freq >= 1.0) {
+        return 1;
+    }
+    return 0;
+}
+
+double raxml_rate_normalize(double rate, double ref_rate) {
+    return rate / ref_rate;
+}
+
+double raxml_branch_clamp(double length_in, double min_len, double max_len) {
+    double length = length_in;
+    if (length < min_len) {
+        length = min_len;
+    }
+    if (length > max_len) {
+        length = max_len;
+    }
+    return length;
+}
+
+uint8_t raxml_improvement_check(double new_score, double old_score, double epsilon) {
+    if (new_score - old_score > epsilon) {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t raxml_tie_break(double p1, double p2) {
+    if (p1 > p2) {
+        return 1;
+    }
+    return 0;
+}
+
+uint8_t raxml_split_conflict(uint8_t is_compatible) {
+    if (is_compatible == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+// --- IQ-TREE ---
+
+uint8_t iqtree_bootstrap_replace(uint8_t replace_flag) {
+    if (replace_flag == 1) {
+        return 1;
+    }
+    return 0;
+}
+
+double iqtree_underflow_scale(double likelihood, double threshold) {
+    if (likelihood < threshold && likelihood > 0.0) {
+        return threshold;
+    }
+    return likelihood;
+}
+
+uint64_t iqtree_align_offset(uint64_t addr, uint64_t mask) {
+    return addr & mask;
+}
+
+uint32_t iqtree_nni_symmetric_update(uint32_t a_in, uint32_t b_in, uint8_t symmetric) {
+    uint32_t a = a_in;
+    uint32_t b = b_in;
+    if (symmetric == 1) {
+        a = a ^ b;
+        b = a ^ b;
+        a = a ^ b;
+    }
+    return a * 100 + b;
+}
+
+double iqtree_branch_clamp(double length_in) {
+    double length = length_in;
+    if (length <= 0.0) {
+        length = 1e-6;
+    }
+    return length;
+}
+
+double iqtree_weight_normalize(double weight, double sum) {
+    return weight / sum;
+}
+
 // --- IPC entry point ---
 
 static int read_exact(void* buf, size_t n) {
@@ -375,6 +567,154 @@ case 6:  packet.payload_u64 = get_lca(3, 4, tree); break;
         }
         case 23: {
             packet.payload_u64 = samtools_proper_pair(0, 0);
+            break;
+        }
+        case 24: {
+            packet.payload_u64 = bwa_sentinel_shift(5, 5);
+            break;
+        }
+        case 25: {
+            packet.payload_u64 = bwa_n_filter(4);
+            break;
+        }
+        case 26: {
+            packet.payload_u64 = bwa_gap_penalty(5, 2, 3);
+            break;
+        }
+        case 27: {
+            packet.payload_u64 = bwa_simd_saturated(250, 5);
+            break;
+        }
+        case 28: {
+            packet.payload_u64 = bwa_chain_gap_valid(10, 10);
+            break;
+        }
+        case 29: {
+            packet.payload_u64 = bwa_pair_strand_code(1, 3);
+            break;
+        }
+        case 30: {
+            packet.payload_f64_1 = bwa_insert_lower_bound(100.0, 200.0, 1.5);
+            break;
+        }
+        case 31: {
+            packet.payload_u64 = salmon_rc_index(2, 10);
+            break;
+        }
+        case 32: {
+            packet.payload_u64 = salmon_ec_filter(1);
+            break;
+        }
+        case 33: {
+            packet.payload_u64 = salmon_em_converged(0.05, 0.05);
+            break;
+        }
+        case 34: {
+            packet.payload_u64 = salmon_rad_pack(3, 1);
+            break;
+        }
+        case 35: {
+            packet.payload_u64 = salmon_mask_base(88);
+            break;
+        }
+        case 36: {
+            packet.payload_u64 = salmon_cigar_state(1);
+            break;
+        }
+        case 37: {
+            packet.payload_f64_1 = gromacs_leapfrog_step(1.0, 2.0, 0.5);
+            break;
+        }
+        case 38: {
+            packet.payload_f64_1 = gromacs_vrescale_lambda(1.0, 4.0);
+            break;
+        }
+        case 39: {
+            packet.payload_f64_1 = gromacs_pbc_wrap(5.5, 0.1);
+            break;
+        }
+        case 40: {
+            packet.payload_u64 = gromacs_halo_buffer_size(8);
+            break;
+        }
+        case 41: {
+            packet.payload_f64_1 = gromacs_fudge_qq(10.0, 0.5);
+            break;
+        }
+        case 42: {
+            packet.payload_f64_1 = gromacs_spring_force(2.0, 3.0);
+            break;
+        }
+        case 43: {
+            packet.payload_f64_1 = foldseek_cbeta_geometry(1.0, 2.0);
+            break;
+        }
+        case 44: {
+            packet.payload_u64 = foldseek_lddt_inclusion(10.0, 3, 5);
+            break;
+        }
+        case 45: {
+            packet.payload_u64 = foldseek_tm_filter(-1, 20.0, 4.0);
+            break;
+        }
+        case 46: {
+            packet.payload_u64 = foldseek_gap_penalty_sat(10, 20);
+            break;
+        }
+        case 47: {
+            packet.payload_u64 = foldseek_bfactor_mask(50.0, 70.0);
+            break;
+        }
+        case 48: {
+            packet.payload_f64_1 = foldseek_evalue_mu(2.0);
+            break;
+        }
+        case 49: {
+            packet.payload_u64 = raxml_freq_invalid(1.0);
+            break;
+        }
+        case 50: {
+            packet.payload_f64_1 = raxml_rate_normalize(10.0, 2.0);
+            break;
+        }
+        case 51: {
+            packet.payload_f64_1 = raxml_branch_clamp(5.0, 0.0, 10.0);
+            break;
+        }
+        case 52: {
+            packet.payload_u64 = raxml_improvement_check(5.0, 4.0, 1.0);
+            break;
+        }
+        case 53: {
+            packet.payload_u64 = raxml_tie_break(5.0, 5.0);
+            break;
+        }
+        case 54: {
+            packet.payload_u64 = raxml_split_conflict(0);
+            break;
+        }
+        case 55: {
+            packet.payload_u64 = iqtree_bootstrap_replace(1);
+            break;
+        }
+        case 56: {
+            packet.payload_f64_1 = iqtree_underflow_scale(0.5, 0.01);
+            break;
+        }
+        case 57: {
+            packet.payload_u64 = iqtree_align_offset(0xFFu, 0x0Fu);
+            break;
+        }
+        case 58: {
+            packet.payload_u64 = iqtree_nni_symmetric_update(3, 7, 1);
+            break;
+        }
+        case 59: {
+            packet.payload_f64_1 = iqtree_branch_clamp(0.0);
+            break;
+        }
+        case 60: {
+            packet.payload_f64_1 = iqtree_weight_normalize(0.3, 3.0);
             break;
         }
         default: return 0;
