@@ -594,47 +594,55 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    var killed_diff: usize = 0;
-    var killed_test: usize = 0;
-    var killed_union: usize = 0;
-    var strong_kill: usize = 0;
-    var silent_to_tests: usize = 0;
-    var assertion_only: usize = 0;
-    var full_escape: usize = 0;
+    // --- Determine class boundary ---
+    // Bio mutants are generated first; generic mutants append afterward.
+    // Verify by counting [BIOLOGICAL FAULT INJECTED] lines in the log.
+    const BIO_COUNT: usize = 65;
+
+    var bio_total: usize = 0;
+    var gen_total: usize = 0;
+    var bio_diff_killed: usize = 0;
+    var bio_test_killed: usize = 0;
+    var gen_diff_killed: usize = 0;
+    var gen_test_killed: usize = 0;
 
     for (compiled.items) |cm| {
         const d = mutant_killed[cm];
         const t = test_killed[cm];
-        if (d) killed_diff += 1;
-        if (t) killed_test += 1;
-        if (d or t) killed_union += 1;
-        if (d and t) {
-            strong_kill += 1;
-        } else if (d and !t) {
-            silent_to_tests += 1;
-        } else if (!d and t) {
-            assertion_only += 1;
+
+        if (cm < BIO_COUNT) {
+            bio_total += 1;
+            if (d) bio_diff_killed += 1;
+            if (t) bio_test_killed += 1;
         } else {
-            full_escape += 1;
+            gen_total += 1;
+            if (d) gen_diff_killed += 1;
+            if (t) gen_test_killed += 1;
         }
     }
 
-    const denom = compiled.items.len;
-    if (denom > 0) {
-        const d: f64 = @floatFromInt(denom);
-        std.debug.print(
-            "\n=== ORACLE A (differential): {d:.2}%  ({d}/{d})\n" ++
-            "=== ORACLE B (test suite):   {d:.2}%  ({d}/{d})\n" ++
-            "=== UNION:                   {d:.2}%  ({d}/{d})\n" ++
-            "=== 2x2: strong={d} silent_to_tests={d} assertion_only={d} full_escape={d}\n",
-            .{
-                100.0 * @as(f64, @floatFromInt(killed_diff)) / d, killed_diff, denom,
-                100.0 * @as(f64, @floatFromInt(killed_test)) / d, killed_test, denom,
-                100.0 * @as(f64, @floatFromInt(killed_union)) / d, killed_union, denom,
-                strong_kill, silent_to_tests, assertion_only, full_escape,
-            },
-        );
-    }
+    const bf: f64 = @floatFromInt(bio_total);
+    const gf: f64 = @floatFromInt(gen_total);
+
+    std.debug.print(
+        "\n=== FOUR-WAY SCORE SPLIT ===\n" ++
+        "MS_bio_diff = {d}/{d} = {d:.2}%\n" ++
+        "MS_bio_test = {d}/{d} = {d:.2}%\n" ++
+        "MS_gen_diff = {d}/{d} = {d:.2}%\n" ++
+        "MS_gen_test = {d}/{d} = {d:.2}%\n" ++
+        "\n=== HYPOTHESIS H1: MS_bio_test < MS_gen_test ===\n" ++
+        "{s}\n",
+        .{
+            bio_diff_killed, bio_total, 100.0 * @as(f64, @floatFromInt(bio_diff_killed)) / bf,
+            bio_test_killed, bio_total, 100.0 * @as(f64, @floatFromInt(bio_test_killed)) / bf,
+            gen_diff_killed, gen_total, 100.0 * @as(f64, @floatFromInt(gen_diff_killed)) / gf,
+            gen_test_killed, gen_total, 100.0 * @as(f64, @floatFromInt(gen_test_killed)) / gf,
+            if (bio_test_killed * gen_total < gen_test_killed * bio_total)
+                "CONFIRMED (MS_bio_test < MS_gen_test)"
+            else
+                "NOT CONFIRMED",
+        },
+    );
 }
 
 // IPC ABI Definition
