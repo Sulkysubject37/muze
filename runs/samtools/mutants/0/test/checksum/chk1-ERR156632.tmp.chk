@@ -1,0 +1,7 @@
+# Checksum 1.0 for file: /Users/sulky/Downloads/off_proj/sem_iii/muze/runs/samtools/mutants/0/test/checksum/chk1-ERR156632.tmp
+# Aux tags:          BC,FI,QT,RT,TC
+# BAM flags:         PAIRED,READ1,READ2
+
+# Group    QC          count  flag+seq  +name     +qual     +aux      combined
+all        all            60  47119710  3ca24166  300d6cfc  47119710  2a8ad12e
+ERR156632  all            60  47119710  3ca24166  300d6cfc  47119710  2a8ad12e

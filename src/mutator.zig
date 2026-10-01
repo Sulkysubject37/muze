@@ -624,6 +624,33 @@ pub fn main(init: std.process.Init) !void {
     const bf: f64 = @floatFromInt(bio_total);
     const gf: f64 = @floatFromInt(gen_total);
 
+    var strong_kill: usize = 0;
+    var silent_to_tests: usize = 0;
+    var assertion_only: usize = 0;
+    var full_escape: usize = 0;
+
+    for (compiled.items) |cm| {
+        const d = mutant_killed[cm];
+        const t = test_killed[cm];
+        if (d and t) {
+            strong_kill += 1;
+        } else if (d and !t) {
+            silent_to_tests += 1;
+        } else if (!d and t) {
+            assertion_only += 1;
+        } else {
+            full_escape += 1;
+        }
+    }
+
+    std.debug.print(
+        "\n=== PHASE 2: 2x2 CLASSIFICATION ===\n" ++
+        "STRONG_KILL: {d}\n" ++
+        "SILENT_TO_TESTS: {d}\n" ++
+        "ASSERTION_ONLY: {d}\n" ++
+        "FULL_ESCAPE: {d}\n",
+        .{ strong_kill, silent_to_tests, assertion_only, full_escape }
+    );
     std.debug.print(
         "\n=== FOUR-WAY SCORE SPLIT ===\n" ++
         "MS_bio_diff = {d}/{d} = {d:.2}%\n" ++

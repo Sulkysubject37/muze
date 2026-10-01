@@ -134,6 +134,84 @@ pub fn sliding_window_minimizer(seq: []const u8, k: usize, w: usize) u64 {
     return min_hash;
 }
 
+test "domain_1" {
+    const count_table = [_]u32{ 0, 1, 2, 3 };
+    const occ_table = [_]u32{0} ** 16;
+    var sp: u32 = 0;
+    var ep: u32 = 0;
+    bwt_backward_search("ACGT", &count_table, &occ_table, 4, &sp, &ep);
+    try std.testing.expect(sp < 100);
+}
+test "domain_2" { try std.testing.expect(sliding_window_minimizer("GGCCAATTGGCC", 5, 6) == 1540447283); }
+test "domain_3" {
+    const tree = [_]TreeNode{ .{ .parent = 0, .depth = 0 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 1, .depth = 2 }, .{ .parent = 1, .depth = 2 } };
+    try std.testing.expect(get_lca(3, 4, &tree) < 10);
+}
+test "domain_4" {
+    const px = [_]f64{ 0.0, 1.2 };
+    const py = [_]f64{ 0.0, 0.0 };
+    const pz = [_]f64{ 0.0, 0.0 };
+    try std.testing.expect(lennard_jones_potential(&px, &py, &pz, 10.0, 2.0) != 0.0);
+}
+test "domain_5" { try std.testing.expect(get_canonical_kmer(encode_kmer("ACGT", 4), 4) > 0); }
+test "domain_6" {
+    const tree = [_]TreeNode{ .{ .parent = 0, .depth = 0 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 0, .depth = 1 }, .{ .parent = 1, .depth = 2 }, .{ .parent = 1, .depth = 2 } };
+    try std.testing.expect(get_lca(3, 1, &tree) == 1);
+}
+test "domain_7" { try std.testing.expect(kraken2_translate(42) == 42); }
+test "domain_8" { try std.testing.expect(kraken2_mask(15, 10) == true); }
+test "domain_9" { try std.testing.expect(jellyfish_canonical_kmer(15) == 15); }
+test "domain_10" { try std.testing.expect(jellyfish_bloom_filter(42) == 522); }
+test "domain_11" { try std.testing.expect(jellyfish_cas_counter(100) == 101); }
+test "domain_12" { try std.testing.expect(kallisto_ec_intersect(0x1234, 0x5678) == 4656); }
+test "domain_13" { try std.testing.expect(kallisto_em_noise_truncate(0.1, 0.5) == 0.0); }
+test "domain_14" { try std.testing.expect(kallisto_effective_length_normalize(200.0, 0.8) == 200); }
+test "domain_15" { try std.testing.expect(kallisto_kmer_odd_constraint(21) == 1); }
+test "domain_16" { try std.testing.expect(kallisto_strand_flip(0x12345678, true) == 305419896); }
+test "domain_17" { try std.testing.expect(kallisto_umi_match(1, 1) > 0); }
+test "domain_18" { try std.testing.expect(samtools_bed_overlap(5, 0, 5) == 0); }
+test "domain_19" { try std.testing.expect(samtools_vcf_coordinate(500) == 501); }
+test "domain_20" { try std.testing.expect(samtools_is_reverse(16) == 1); }
+test "domain_21" { try std.testing.expect(samtools_iupac_match(3, 5) == 0); }
+test "domain_22" { try std.testing.expect(samtools_unclipped_pos(200, 50, false) == 200); }
+test "domain_23" { try std.testing.expect(samtools_proper_pair(0, 0) == 0); }
+test "domain_24" { try std.testing.expect(bwa_sentinel_shift(5, 5) < 10); }
+test "domain_25" { try std.testing.expect(bwa_n_filter(1) == 1); }
+test "domain_26" { try std.testing.expect(bwa_gap_penalty(4, 1, 6) == 10); }
+test "domain_27" { try std.testing.expect(bwa_simd_saturated(250, 5) > 0); }
+test "domain_28" { try std.testing.expect(bwa_chain_gap_valid(5, 20) == 1); }
+test "domain_29" { try std.testing.expect(bwa_pair_strand_code(0, 2) == 2); }
+test "domain_30" { try std.testing.expect(bwa_insert_lower_bound(150.0, 50.0, 2.0) == 350.0); }
+test "domain_31" { try std.testing.expect(salmon_rc_index(2, 10) < 100); }
+test "domain_32" { try std.testing.expect(salmon_ec_filter(5) == 0); }
+test "domain_33" { try std.testing.expect(salmon_em_converged(0.05, 0.05) == 0); }
+test "domain_34" { try std.testing.expect(salmon_rad_pack(3, 1) < 10); }
+test "domain_35" { try std.testing.expect(salmon_mask_base(88) > 0); }
+test "domain_36" { try std.testing.expect(salmon_cigar_state(1) > 0); }
+test "domain_37" { try std.testing.expect(gromacs_leapfrog_step(1.0, 2.0, 0.5) > 0); }
+test "domain_38" { try std.testing.expect(gromacs_vrescale_lambda(2.0, 5.0) == 0.6324555320336759); }
+test "domain_39" { try std.testing.expect(gromacs_pbc_wrap(10.5, 0.2) == 0.5); }
+test "domain_40" { try std.testing.expect(gromacs_halo_buffer_size(8) < 100); }
+test "domain_41" { try std.testing.expect(gromacs_fudge_qq(10.0, 0.5) > 0); }
+test "domain_42" { try std.testing.expect(gromacs_spring_force(2.0, 3.0) != 0.0); }
+test "domain_43" { try std.testing.expect(foldseek_cbeta_geometry(1.0, 2.0) < 10.0); }
+test "domain_44" { try std.testing.expect(foldseek_lddt_inclusion(8.0, 2, 8) == 1); }
+test "domain_45" { try std.testing.expect(foldseek_tm_filter(-1, 30.0, 1.0) == 0); }
+test "domain_46" { try std.testing.expect(foldseek_gap_penalty_sat(5, 50) == 0); }
+test "domain_47" { try std.testing.expect(foldseek_bfactor_mask(10.0, 90.0) == 1); }
+test "domain_48" { try std.testing.expect(foldseek_evalue_mu(2.0) < 10.0); }
+test "domain_49" { try std.testing.expect(raxml_freq_invalid(1.0) > 0); }
+test "domain_50" { try std.testing.expect(raxml_rate_normalize(15.0, 3.0) == 5); }
+test "domain_51" { try std.testing.expect(raxml_branch_clamp(7.5, 1.0, 20.0) == 7.5); }
+test "domain_52" { try std.testing.expect(raxml_improvement_check(10.0, 2.0, 0.5) == 1); }
+test "domain_53" { try std.testing.expect(raxml_tie_break(3.0, 7.0) == 0); }
+test "domain_54" { try std.testing.expect(raxml_split_conflict(0) > 0); }
+test "domain_55" { try std.testing.expect(iqtree_bootstrap_replace(5) == 0); }
+test "domain_56" { try std.testing.expect(iqtree_underflow_scale(0.8, 0.1) == 0.8); }
+test "domain_57" { try std.testing.expect(iqtree_align_offset(0xAA, 0x03) == 2); }
+test "domain_58" { try std.testing.expect(iqtree_nni_symmetric_update(3, 7, 1) > 0); }
+test "domain_59" { try std.testing.expect(iqtree_branch_clamp(0.0) == 0.000001); }
+test "domain_60" { try std.testing.expect(iqtree_weight_normalize(0.7, 5.0) == 0.13999999999999999); }
 test "bwt_returns_valid_interval" {
     var sp: u32 = 0;
     var ep: u32 = 0;

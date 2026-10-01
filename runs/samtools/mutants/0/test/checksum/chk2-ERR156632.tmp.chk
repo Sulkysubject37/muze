@@ -1,0 +1,7 @@
+# Checksum 1.0 for file: /Users/sulky/Downloads/off_proj/sem_iii/muze/runs/samtools/mutants/0/test/checksum/chk2-ERR156632.tmp
+# Aux tags:          *,cF,MD,NM
+# BAM flags:         PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY
+
+# Group    QC          count  flag+seq  +name     +qual     +aux      +chr/pos  +cigar    +mate     combined
+all        all            60  2d77e435  040aad2d  718aa362  53a65f1d  5cf6e893  4af8689e  36f6cdaf  2cf0cd57
+ERR156632  all            60  2d77e435  040aad2d  718aa362  53a65f1d  5cf6e893  4af8689e  36f6cdaf  2cf0cd57
