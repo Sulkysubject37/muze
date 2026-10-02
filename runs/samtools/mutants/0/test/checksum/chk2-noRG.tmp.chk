@@ -1,7 +1,0 @@
-# Checksum 1.0 for file: /Users/sulky/Downloads/off_proj/sem_iii/muze/runs/samtools/mutants/0/test/checksum/chk2-noRG.tmp
-# Aux tags:          *,cF,MD,NM
-# BAM flags:         PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY
-
-# Group    QC          count  flag+seq  +name     +qual     +aux      +chr/pos  +cigar    +mate     combined
-all        all            13  5301e7ef  40e64b8d  5dd9326e  4e8a56b4  127a7d6e  5454448e  6eb7ab5b  6571dfca
--          all            13  5301e7ef  40e64b8d  5dd9326e  4e8a56b4  127a7d6e  5454448e  6eb7ab5b  6571dfca

@@ -1,7 +1,7 @@
 const IR = @import("../ir/soa.zig").IR;
 const Lang = @import("../ir/kinds.zig").Lang;
 
-pub const Class = enum { bio, aor, ror, lcr };
+pub const Class = enum { bio, aor, ror, lcr, bit, log };
 
 pub const Match = struct {
     node_idx: u32,

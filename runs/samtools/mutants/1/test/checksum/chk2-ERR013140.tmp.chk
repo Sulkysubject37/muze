@@ -1,7 +1,0 @@
-# Checksum 1.0 for file: /Users/sulky/Downloads/off_proj/sem_iii/muze/runs/samtools/mutants/1/test/checksum/chk2-ERR013140.tmp
-# Aux tags:          *,cF,MD,NM
-# BAM flags:         PAIRED,PROPER_PAIR,UNMAP,MUNMAP,REVERSE,MREVERSE,READ1,READ2,SECONDARY,QCFAIL,DUP,SUPPLEMENTARY
-
-# Group    QC          count  flag+seq  +name     +qual     +aux      +chr/pos  +cigar    +mate     combined
-all        all            71  284ddd75  7e138598  266ada9b  54ebc7e0  4d154504  73ae51d8  563bfaa3  6584bf28
-ERR013140  all            71  284ddd75  7e138598  266ada9b  54ebc7e0  4d154504  73ae51d8  563bfaa3  6584bf28

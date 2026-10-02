@@ -12,14 +12,32 @@ pub fn exec(
     io: std.Io,
     cmd: []const u8,
     cwd: []const u8,
-    _: u32,
+    timeout_s: u32,
     stdout_path: []const u8,
     stderr_path: []const u8,
 ) !ExecResult {
     const cwd_dir = std.Io.Dir.cwd();
 
+    const timeout_str = try std.fmt.allocPrint(allocator, "{d}", .{timeout_s});
+    defer allocator.free(timeout_str);
+
+    const sh_cmd = try std.fmt.allocPrint(allocator, "cd {s} && {s}", .{cwd, cmd});
+    defer allocator.free(sh_cmd);
+
+    const perl_script =
+        \\setpgrp;
+        \\my $timeout = shift;
+        \\my $pid = fork();
+        \\if ($pid == 0) { exec @ARGV; exit 1; }
+        \\local $SIG{ALRM} = sub { kill '-KILL', 0 };
+        \\alarm $timeout;
+        \\waitpid($pid, 0);
+        \\alarm 0;
+        \\my $s = $?;
+        \\if ($s & 127) { exit(128 + ($s & 127)); } else { exit($s >> 8); }
+    ;
     const res = try std.process.run(allocator, io, .{
-        .argv = &.{ "/bin/sh", "-c", try std.fmt.allocPrint(allocator, "cd {s} && {s}", .{cwd, cmd}) },
+        .argv = &.{ "perl", "-e", perl_script, timeout_str, "/bin/sh", "-c", sh_cmd },
     });
     defer allocator.free(res.stdout);
     defer allocator.free(res.stderr);
@@ -33,15 +51,16 @@ pub fn exec(
                 .exit_code = code,
                 .signaled = false,
                 .signal = 0,
-                .timed_out = code == 124,
+                .timed_out = code == 124 or code == 142 or code == 137,
             };
         },
         .signal => |sig| {
+            const sig_val = @intFromEnum(sig);
             return .{
                 .exit_code = 0,
                 .signaled = true,
-                .signal = @intFromEnum(sig),
-                .timed_out = false,
+                .signal = sig_val,
+                .timed_out = sig_val == 14, // SIGALRM
             };
         },
         .stopped, .unknown => {

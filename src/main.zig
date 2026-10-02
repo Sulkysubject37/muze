@@ -15,6 +15,160 @@ const tce = @import("oracle/tce.zig");
 const json_report = @import("report/json.zig");
 const md_report = @import("report/md.zig");
 
+const WorkerResult = struct {
+    records: std.ArrayList(json_report.MutantRecord),
+    killed: u32,
+    survived: u32,
+    invalid: u32,
+    timed_out: u32,
+    tce_discard: u32,
+    baseline_hashes: std.StringHashMap([32]u8),
+};
+
+const WorkerContext = struct {
+    alloc: std.mem.Allocator,
+    io: std.Io,
+    adapter: Adapter,
+    runs_root: []const u8,
+    runs_baseline: []const u8,
+    matches_chunk: []const MatchEntry,
+    start_idx: usize,
+    res: *WorkerResult,
+    csv_lock: *std.atomic.Value(u8),
+    tool_name: []const u8,
+};
+
+const MatchEntry = struct {
+    file_path: []const u8,
+    m: match.Match,
+    source: []const u8,
+    op_idx: usize,
+};
+
+fn workerMain(ctx: WorkerContext) void {
+    for (ctx.matches_chunk, 0..) |entry, i| {
+        const op = registry.all[entry.op_idx];
+        const mutant_id = ctx.start_idx + i;
+
+        const mutant_dir_slice = std.fmt.allocPrint(ctx.alloc, "{s}/mutants/{d}", .{ctx.runs_root, mutant_id}) catch continue;
+        defer ctx.alloc.free(mutant_dir_slice);
+
+        sandbox.copyTree(ctx.alloc, ctx.io, ctx.runs_baseline, mutant_dir_slice) catch continue;
+
+        const mutant_source = splice(ctx.alloc, entry.source, entry.m, op.replacement) catch continue;
+        defer ctx.alloc.free(mutant_source);
+
+        const target_file_slice = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{mutant_dir_slice, entry.file_path}) catch continue;
+        defer ctx.alloc.free(target_file_slice);
+
+        std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = target_file_slice, .data = mutant_source }) catch continue;
+
+        var verdict = @import("runner/classify.zig").Verdict.invalid;
+        var tce_eq = false;
+
+        const obj_target = std.fmt.allocPrint(ctx.alloc, "{s}o", .{entry.file_path[0 .. entry.file_path.len - 1]}) catch continue;
+        defer ctx.alloc.free(obj_target);
+
+        var base_hash_opt: ?[32]u8 = null;
+        if (ctx.res.baseline_hashes.get(entry.file_path)) |h| {
+            base_hash_opt = h;
+        } else {
+            const base_obj_path = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{ctx.runs_baseline, obj_target}) catch continue;
+            defer ctx.alloc.free(base_obj_path);
+            if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), base_obj_path)) |hash| {
+                ctx.res.baseline_hashes.put(entry.file_path, hash) catch {};
+                base_hash_opt = hash;
+            } else |_| {}
+        }
+
+        const mut_rm_cmd = std.fmt.allocPrint(ctx.alloc, "rm -f {s}", .{obj_target}) catch continue;
+        _ = sandbox.exec(ctx.alloc, ctx.io, mut_rm_cmd, mutant_dir_slice, 10, "/dev/null", "/dev/null") catch {};
+        ctx.alloc.free(mut_rm_cmd);
+
+        const mut_cmd = std.fmt.allocPrint(ctx.alloc, "make CC=\"ccache gcc\" {s} CFLAGS=\"-O3\"", .{obj_target}) catch continue;
+        defer ctx.alloc.free(mut_cmd);
+        
+        const mut_tce_res = sandbox.exec(ctx.alloc, ctx.io, mut_cmd, mutant_dir_slice, 60, "/dev/null", "/dev/null") catch continue;
+        
+        if (mut_tce_res.exit_code == 0) {
+            const mut_obj_path = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{mutant_dir_slice, obj_target}) catch continue;
+            defer ctx.alloc.free(mut_obj_path);
+            if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), mut_obj_path)) |mut_hash| {
+                if (base_hash_opt) |base_hash| {
+                    if (std.mem.eql(u8, &base_hash, &mut_hash)) {
+                        tce_eq = true;
+                    }
+                }
+            } else |_| {}
+        }
+
+        std.debug.print("[muze] mutant {d}: {s} {s} (node {d})", .{ mutant_id, entry.file_path, op.name, entry.m.node_idx });
+        if (mut_tce_res.exit_code != 0) {
+            verdict = .invalid;
+            std.debug.print(" -> invalid\n", .{});
+            ctx.res.invalid += 1;
+        } else if (tce_eq) {
+            ctx.res.tce_discard += 1;
+            std.debug.print(" -> tce equivalent\n", .{});
+            const rm_dir_cmd = std.fmt.allocPrint(ctx.alloc, "rm -rf {s}", .{mutant_dir_slice}) catch continue;
+            _ = sandbox.exec(ctx.alloc, ctx.io, rm_dir_cmd, ".", 10, "/dev/null", "/dev/null") catch {};
+            ctx.alloc.free(rm_dir_cmd);
+            continue;
+        } else {
+            verdict = test_suite.run(ctx.alloc, ctx.io, ctx.adapter, mutant_dir_slice, mutant_dir_slice) catch continue;
+            
+            std.debug.print(" -> {s}\n", .{@tagName(verdict)});
+            switch (verdict) {
+                .killed   => ctx.res.killed += 1,
+                .survived => ctx.res.survived += 1,
+                .invalid  => ctx.res.invalid += 1,
+                .timeout  => ctx.res.timed_out += 1,
+            }
+        }
+        
+        ctx.res.records.append(ctx.alloc, .{
+            .id = @intCast(mutant_id),
+            .file = entry.file_path,
+            .operator = op.name,
+            .class = @tagName(op.class),
+            .op_start = entry.m.op_start,
+            .op_end = entry.m.op_end,
+            .verdict = @tagName(verdict),
+        }) catch {};
+        
+        {
+            while (ctx.csv_lock.cmpxchgWeak(0, 1, .acquire, .monotonic) != null) {}
+            defer ctx.csv_lock.store(0, .release);
+            
+            const csv_path = std.fmt.allocPrint(ctx.alloc, "runs/{s}/results.csv", .{ctx.tool_name}) catch continue;
+            defer ctx.alloc.free(csv_path);
+            
+            var file = std.Io.Dir.cwd().openFile(ctx.io, csv_path, .{ .mode = .read_write }) catch blk: {
+                var f = std.Io.Dir.cwd().createFile(ctx.io, csv_path, .{ .truncate = false }) catch continue;
+                f.writeStreamingAll(ctx.io, "id,file,operator,class,verdict\n") catch {};
+                break :blk f;
+            };
+            defer file.close(ctx.io);
+            
+            const line = std.fmt.allocPrint(ctx.alloc, "{d},{s},{s},{s},{s}\n", .{
+                mutant_id, entry.file_path, op.name, @tagName(op.class), @tagName(verdict)
+            }) catch continue;
+            defer ctx.alloc.free(line);
+            
+            if (file.stat(ctx.io)) |stat| {
+                file.writePositionalAll(ctx.io, line, stat.size) catch {};
+            } else |_| {}
+        }
+        
+        const rm_dir_cmd = std.fmt.allocPrint(ctx.alloc, "rm -rf {s}", .{mutant_dir_slice}) catch continue;
+        _ = sandbox.exec(ctx.alloc, ctx.io, rm_dir_cmd, ".", 10, "/dev/null", "/dev/null") catch {};
+        ctx.alloc.free(rm_dir_cmd);
+    }
+}
+
+fn sortRecords(_: void, a: json_report.MutantRecord, b: json_report.MutantRecord) bool {
+    return a.id < b.id;
+}
 pub fn main(init: std.process.Init) !void {
     const alloc = init.arena.allocator();
     const io = init.io;
@@ -91,12 +245,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     // --- Parse target files, find matches ---
-    var all_matches = std.ArrayList(struct {
-        file_path: []const u8,
-        m: match.Match,
-        source: []const u8,
-        op_idx: usize,
-    }).empty;
+    var all_matches = std.ArrayList(MatchEntry).empty;
     defer {
         for (all_matches.items) |entry| {
             alloc.free(entry.file_path);
@@ -163,6 +312,51 @@ pub fn main(init: std.process.Init) !void {
     std.debug.print("[muze] total matches: {d}\n", .{all_matches.items.len});
 
     // --- Generate and run mutants ---
+    const cpu_count: usize = 8;
+    var workers: [8]std.Thread = undefined;
+    var results: [8]WorkerResult = undefined;
+
+    if (limit != std.math.maxInt(u32) and all_matches.items.len > limit) {
+        all_matches.items.len = limit;
+    }
+
+    const chunk_size = (all_matches.items.len + cpu_count - 1) / cpu_count;
+
+    var csv_lock = std.atomic.Value(u8).init(0);
+    for (0..cpu_count) |i| {
+        results[i] = WorkerResult{
+            .records = std.ArrayList(json_report.MutantRecord).empty,
+            .killed = 0,
+            .survived = 0,
+            .invalid = 0,
+            .timed_out = 0,
+            .tce_discard = 0,
+            .baseline_hashes = std.StringHashMap([32]u8).init(alloc),
+        };
+        
+        const start = i * chunk_size;
+        var end = (i + 1) * chunk_size;
+        if (end > all_matches.items.len) end = all_matches.items.len;
+        if (start >= all_matches.items.len) {
+            end = start;
+        }
+        
+        const ctx = WorkerContext{
+            .alloc = alloc,
+            .io = io,
+            .adapter = adapter,
+            .runs_root = runs_root.items,
+            .runs_baseline = runs_baseline.items,
+            .matches_chunk = all_matches.items.ptr[start..end],
+            .start_idx = start,
+            .res = &results[i],
+            .csv_lock = &csv_lock,
+            .tool_name = tool_name,
+        };
+        
+        workers[i] = std.Thread.spawn(.{}, workerMain, .{ctx}) catch unreachable;
+    }
+
     var records = std.ArrayList(json_report.MutantRecord).empty;
     defer records.deinit(alloc);
 
@@ -170,122 +364,29 @@ pub fn main(init: std.process.Init) !void {
     var survived: u32 = 0;
     var invalid: u32 = 0;
     var timed_out: u32 = 0;
-
-    var mutant_id: u32 = 0;
-    var baseline_hashes = std.StringHashMap([32]u8).init(alloc);
-    defer baseline_hashes.deinit();
     var tce_discard: u32 = 0;
-    
-    for (all_matches.items) |entry| {
-        // limit removed
 
-        const op = registry.all[entry.op_idx];
-
-        // Mutant dir
-        var mutant_dir = std.ArrayList(u8).empty;
-        defer mutant_dir.deinit(alloc);
-        try mutant_dir.appendSlice(alloc, runs_root.items);
-        try mutant_dir.appendSlice(alloc, "/mutants/");
-        try mutant_dir.appendSlice(alloc, try std.fmt.allocPrint(alloc, "{d}", .{mutant_id}));
-
-        try sandbox.copyTree(alloc, io, runs_baseline.items, mutant_dir.items);
-
-        // Splice mutated source and overwrite the file in the mutant dir.
-        const mutant_source = try splice(alloc, entry.source, entry.m, op.replacement);
-        defer alloc.free(mutant_source);
-
-        var target_file = std.ArrayList(u8).empty;
-        defer target_file.deinit(alloc);
-        try target_file.appendSlice(alloc, mutant_dir.items);
-        try target_file.appendSlice(alloc, "/");
-        try target_file.appendSlice(alloc, entry.file_path);
-
-        try cwd.writeFile(io, .{
-            .sub_path = target_file.items,
-            .data = mutant_source,
-        });
-
-        std.debug.print("[muze] mutant {d}: {s} {s} (node {d})\n",
-            .{ mutant_id, entry.file_path, op.name, entry.m.node_idx });
-
-        var verdict = @import("runner/classify.zig").Verdict.invalid;
+    for (0..cpu_count) |i| {
+        workers[i].join();
         
-        // TCE
-        const obj_target = try std.fmt.allocPrint(alloc, "{s}o", .{entry.file_path[0 .. entry.file_path.len - 1]});
-        defer alloc.free(obj_target);
+        killed += results[i].killed;
+        survived += results[i].survived;
+        invalid += results[i].invalid;
+        timed_out += results[i].timed_out;
+        tce_discard += results[i].tce_discard;
         
-        if (!baseline_hashes.contains(entry.file_path)) {
-            const rm_cmd = try std.fmt.allocPrint(alloc, "rm -f {s}", .{obj_target});
-            _ = try sandbox.exec(alloc, io, rm_cmd, runs_baseline.items, 10, "/dev/null", "/dev/null");
-            alloc.free(rm_cmd);
-            
-            const base_cmd = try std.fmt.allocPrint(alloc, "make {s} CFLAGS=\"-g -O0\"", .{obj_target});
-            _ = try sandbox.exec(alloc, io, base_cmd, runs_baseline.items, 60, "/dev/null", "/dev/null");
-            alloc.free(base_cmd);
-            
-            const base_obj_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{runs_baseline.items, obj_target});
-            defer alloc.free(base_obj_path);
-            if (tce.hashFile(alloc, io, cwd, base_obj_path)) |hash| {
-                try baseline_hashes.put(entry.file_path, hash);
-            } else |err| {
-                std.debug.print("[muze] TCE baseline hash fail {s}: {any}\n", .{entry.file_path, err});
-            }
+        for (results[i].records.items) |r| {
+            records.append(alloc, r) catch unreachable;
         }
-
-        const mut_cmd = try std.fmt.allocPrint(alloc, "make {s} CFLAGS=\"-g -O0\"", .{obj_target});
-        defer alloc.free(mut_cmd);
-        
-        const mut_tce_res = try sandbox.exec(alloc, io, mut_cmd, mutant_dir.items, 60, "/dev/null", "/dev/null");
-        
-        var tce_eq = false;
-        if (mut_tce_res.exit_code == 0) {
-            const mut_obj_path = try std.fmt.allocPrint(alloc, "{s}/{s}", .{mutant_dir.items, obj_target});
-            defer alloc.free(mut_obj_path);
-            if (tce.hashFile(alloc, io, cwd, mut_obj_path)) |mut_hash| {
-                if (baseline_hashes.get(entry.file_path)) |base_hash| {
-                    if (std.mem.eql(u8, &base_hash, &mut_hash)) {
-                        tce_eq = true;
-                    }
-                }
-            } else |_| {}
-        }
-
-        if (mut_tce_res.exit_code != 0) {
-            verdict = .invalid;
-            std.debug.print(" -> invalid\n", .{});
-        } else if (tce_eq) {
-            tce_discard += 1;
-            std.debug.print(" -> tce equivalent\n", .{});
-            continue;
-        } else {
-            verdict = try test_suite.run(alloc, io, adapter, mutant_dir.items, mutant_dir.items);
-            std.debug.print(" -> {s}\n", .{@tagName(verdict)});
-        }
-
-        switch (verdict) {
-            .killed   => killed   += 1,
-            .survived => survived += 1,
-            .invalid  => invalid  += 1,
-            .timeout  => timed_out += 1,
-        }
-
-        try records.append(alloc, .{
-            .id = mutant_id,
-            .file = entry.file_path,
-            .operator = op.name,
-            .class = @tagName(op.class),
-            .op_start = entry.m.op_start,
-            .op_end = entry.m.op_end,
-            .verdict = @tagName(verdict),
-        });
-
-        mutant_id += 1;
+        results[i].records.deinit(alloc);
+        results[i].baseline_hashes.deinit();
     }
 
-    // --- Write reports ---
+    std.mem.sort(json_report.MutantRecord, records.items, {}, sortRecords);
+
     const report = json_report.ToolReport{
         .tool = adapter.name,
-        .total = mutant_id,
+        .total = @as(u32, @intCast(all_matches.items.len)),
         .killed = killed,
         .survived = survived,
         .invalid = invalid,
@@ -307,7 +408,7 @@ pub fn main(init: std.process.Init) !void {
     try md_report.write(alloc, io, report_md.items, report);
 
     std.debug.print("\n=== {s} DONE ===\n", .{adapter.name});
-    std.debug.print("  mutants generated: {d}\n", .{mutant_id});
+    std.debug.print("  mutants generated: {d}\n", .{all_matches.items.len});
     std.debug.print("  killed:    {d}\n", .{killed});
     std.debug.print("  survived:  {d}\n", .{survived});
     std.debug.print("  invalid:   {d}\n", .{invalid});

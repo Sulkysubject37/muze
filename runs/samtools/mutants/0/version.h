@@ -1,8 +1,0 @@
-#define SAMTOOLS_VERSION "1.24"
-#define SAMTOOLS_CC "gcc -std=gnu23"
-#define SAMTOOLS_CPPFLAGS ""
-#define SAMTOOLS_CFLAGS "-Wall -g -O2"
-#define SAMTOOLS_LDFLAGS ""
-#define SAMTOOLS_HTSDIR "../htslib"
-#define SAMTOOLS_LIBS ""
-#define SAMTOOLS_CURSES_LIB "-lncurses"

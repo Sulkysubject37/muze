@@ -1,3 +1,0 @@
-config.mk:46: ../htslib/htslib_static.mk: No such file or directory
-Makefile:152: htscodecs.mk: No such file or directory
-ld: warning: ignoring duplicate libraries: '-lm', '-lpthread', '-lz'
