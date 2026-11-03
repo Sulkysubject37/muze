@@ -88,6 +88,165 @@ fn predBioDtDiv(ir: *const IR, i: u32) bool {
     return false;
 }
 
+// IQ-TREE Evolutionary Substitution & Phylogenetic Operators
+fn predBioStateFreqMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "state_freq") != null or std.mem.indexOf(u8, r_text, "state_freq") != null;
+}
+
+fn predBioStateFreqDiv(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "/")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "state_freq") != null or std.mem.indexOf(u8, r_text, "state_freq") != null;
+}
+
+fn predBioStateFreqAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "state_freq") != null or std.mem.indexOf(u8, r_text, "state_freq") != null;
+}
+
+fn predBioNumStatesMinusOne(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    if (ir.kind[r] != .int_lit or !std.mem.eql(u8, ir.nodeSlice(r), "1")) return false;
+    const l_text = ir.nodeSlice(l);
+    return std.mem.indexOf(u8, l_text, "num_states") != null;
+}
+
+fn predBioRateNormDiv(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "/")) return false;
+    const l = childAt(ir, i, 0);
+    if (l == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    return std.mem.indexOf(u8, l_text, "total_num_subst") != null;
+}
+
+fn predBioGammaShapePlusOne(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    if (ir.kind[r] != .int_lit or !std.mem.eql(u8, ir.nodeSlice(r), "1")) return false;
+    const l_text = ir.nodeSlice(l);
+    return std.mem.indexOf(u8, l_text, "gamma_shape") != null;
+}
+
+fn predBioGammaShapeMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "gamma_shape") != null or std.mem.indexOf(u8, r_text, "gamma_shape") != null;
+}
+
+fn predBioPInvarSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "p_invar") != null;
+}
+
+fn predBioNCatMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "ncategory") != null or std.mem.indexOf(u8, r_text, "ncategory") != null;
+}
+
+fn predBioNCatDiv(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "/")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "ncategory") != null;
+}
+
+fn predBioTimeMulStates(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "time") != null and std.mem.indexOf(u8, r_text, "num_states") != null) or
+           (std.mem.indexOf(u8, r_text, "time") != null and std.mem.indexOf(u8, l_text, "num_states") != null);
+}
+
+fn predBioGammaCategoryPlus(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "cat") != null or std.mem.indexOf(u8, r_text, "cat") != null or
+           std.mem.indexOf(u8, l_text, "ncategory") != null or std.mem.indexOf(u8, r_text, "ncategory") != null;
+}
+
+fn predBioScaleFactorPlus(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "scale") != null or std.mem.indexOf(u8, r_text, "scale") != null;
+}
+
+fn predBioRatesMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "rates") != null or std.mem.indexOf(u8, r_text, "rates") != null;
+}
+
+fn predBioRatesDiv(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "/")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "rates") != null or std.mem.indexOf(u8, r_text, "rates") != null;
+}
+
+fn predBioProbSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "1.0") != null or std.mem.indexOf(u8, l_text, "1") != null) and
+           (std.mem.indexOf(u8, r_text, "freq") != null or std.mem.indexOf(u8, r_text, "mu") != null or std.mem.indexOf(u8, r_text, "exp") != null or std.mem.indexOf(u8, r_text, "diagonal") != null);
+}
+
 pub const all = [_]Operator{
 
     .{ .name = "AOR: != to ==", .class = .aor, .langs = &.{ .c, .cpp }, .predicate = predNeq, .replacement = "==" },
@@ -168,4 +327,28 @@ pub const all = [_]Operator{
     .{ .name = "BIO: Settle Water Inverse H-H to O-H distance", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("invdHH"), .replacement = "invdOH" },
     .{ .name = "BIO: Forcefield fudgeQQ to fudgeLJ", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("fudgeQQ"), .replacement = "fudgeLJ" },
     .{ .name = "BIO: Forcefield fudgeLJ to fudgeQQ", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("fudgeLJ"), .replacement = "fudgeQQ" },
+
+    // IQ-TREE Evolutionary & Phylogenetic Operators
+    .{ .name = "BIO: Detailed Balance State Frequency Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioStateFreqMul, .replacement = "/" },
+    .{ .name = "BIO: Detailed Balance State Frequency Divide to Multiply", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioStateFreqDiv, .replacement = "*" },
+    .{ .name = "BIO: Substitution Rate Normalization Divide to Multiply", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioRateNormDiv, .replacement = "*" },
+    .{ .name = "BIO: Gamma Rate Recurrence Plus One to Minus One", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGammaShapePlusOne, .replacement = "-" },
+    .{ .name = "BIO: Gamma Degrees of Freedom Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGammaShapeMul, .replacement = "/" },
+    .{ .name = "BIO: Invariable Sites Proportion Sign Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioPInvarSub, .replacement = "+" },
+    .{ .name = "BIO: Discrete Category Weight Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioNCatMul, .replacement = "/" },
+    .{ .name = "BIO: Discrete Category Weight Divide to Multiply", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioNCatDiv, .replacement = "*" },
+    .{ .name = "BIO: Branch Time Dimensionality Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioTimeMulStates, .replacement = "/" },
+    .{ .name = "BIO: Category Discretization Plus to Minus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGammaCategoryPlus, .replacement = "-" },
+    .{ .name = "BIO: Likelihood Scaling Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioScaleFactorPlus, .replacement = "-" },
+    .{ .name = "BIO: Substitution Rate Scaling Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioRatesMul, .replacement = "/" },
+    .{ .name = "BIO: Substitution Rate Scaling Divide to Multiply", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioRatesDiv, .replacement = "*" },
+    .{ .name = "BIO: Transition Probability Conservation Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioProbSub, .replacement = "+" },
+    .{ .name = "BIO: State Frequency Summation Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioStateFreqAdd, .replacement = "-" },
+    .{ .name = "BIO: State Dimension Degrees of Freedom Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioNumStatesMinusOne, .replacement = "+" },
+    .{ .name = "BIO: State Frequency Equal to Estimate", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("FREQ_EQUAL"), .replacement = "FREQ_ESTIMATE" },
+    .{ .name = "BIO: State Frequency Estimate to Equal", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("FREQ_ESTIMATE"), .replacement = "FREQ_EQUAL" },
+    .{ .name = "BIO: State Frequency Empirical to Equal", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("FREQ_EMPIRICAL"), .replacement = "FREQ_EQUAL" },
+    .{ .name = "BIO: Sequence Alphabet DNA to Protein", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("SEQ_DNA"), .replacement = "SEQ_PROTEIN" },
+    .{ .name = "BIO: Invariable Sites Bound Tolerance Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("MIN_PINVAR"), .replacement = "TOL_PINVAR" },
+    .{ .name = "BIO: Zero Frequency Threshold Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("ZERO_FREQ"), .replacement = "MIN_RATE" },
 };

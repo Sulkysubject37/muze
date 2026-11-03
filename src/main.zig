@@ -213,7 +213,7 @@ pub fn main(init: std.process.Init) !void {
     var test_file = std.ArrayList(u8).empty;
     defer test_file.deinit(alloc);
     try test_file.appendSlice(alloc, runs_baseline.items);
-    if (std.mem.eql(u8, adapter.name, "gromacs")) {
+    if (std.mem.eql(u8, adapter.name, "gromacs") or std.mem.eql(u8, adapter.name, "iqtree")) {
         try test_file.appendSlice(alloc, "/build/compile_commands.json");
     } else {
         try test_file.appendSlice(alloc, "/samtools");
@@ -316,7 +316,16 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    std.debug.print("[muze] total matches: {d}\n", .{all_matches.items.len});
+    var bio_count: usize = 0;
+    var gen_count: usize = 0;
+    for (all_matches.items) |entry| {
+        if (registry.all[entry.op_idx].class == .bio) {
+            bio_count += 1;
+        } else {
+            gen_count += 1;
+        }
+    }
+    std.debug.print("[muze] total matches: {d} (bio: {d}, generic: {d})\n", .{ all_matches.items.len, bio_count, gen_count });
 
         // --- Generate and run mutants ---
     const cpu_count: usize = adapter.max_workers;

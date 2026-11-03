@@ -1,1 +1,5 @@
 runs/
+.zig-cache/
+zig-out/
+external/gromacs
+external/iqtree
