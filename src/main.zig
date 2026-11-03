@@ -64,7 +64,7 @@ fn workerMain(ctx: WorkerContext) void {
         defer ctx.alloc.free(base_file);
         defer ctx.alloc.free(work_file);
         
-        sandbox.copyTree(ctx.alloc, ctx.io, base_file, work_file) catch continue;
+        defer std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = entry.source }) catch {};
 
         const mutant_source = splice(ctx.alloc, entry.source, entry.m, op.replacement) catch continue;
         defer ctx.alloc.free(mutant_source);
@@ -78,7 +78,7 @@ fn workerMain(ctx: WorkerContext) void {
         if (ctx.res.baseline_hashes.get(entry.file_path)) |h| {
             base_hash_opt = h;
         } else {
-            sandbox.copyTree(ctx.alloc, ctx.io, base_file, work_file) catch continue; 
+            std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = entry.source }) catch continue; 
             if (ctx.adapter.compileMutant(ctx.alloc, ctx.io, entry.file_path, worker_dir)) |base_obj| {
                 defer ctx.alloc.free(base_obj);
                 if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), base_obj)) |hash| {
@@ -209,29 +209,46 @@ pub fn main(init: std.process.Init) !void {
     }
 
 
-    std.debug.print("[muze] copying source tree -> {s}\n", .{runs_baseline.items});
-    try sandbox.copyTree(alloc, io, adapter.source_root, runs_baseline.items);
+    var skip_baseline = false;
+    var test_file = std.ArrayList(u8).empty;
+    defer test_file.deinit(alloc);
+    try test_file.appendSlice(alloc, runs_baseline.items);
+    if (std.mem.eql(u8, adapter.name, "gromacs")) {
+        try test_file.appendSlice(alloc, "/build/compile_commands.json");
+    } else {
+        try test_file.appendSlice(alloc, "/samtools");
+    }
+    if (cwd.statFile(io, test_file.items, .{})) |_| {
+        skip_baseline = true;
+    } else |_| {}
 
-    // --- Baseline build + smoke ---
-    var base_stdout = std.ArrayList(u8).empty;
-    defer base_stdout.deinit(alloc);
-    try base_stdout.appendSlice(alloc, runs_baseline.items);
-    try base_stdout.appendSlice(alloc, "/build.stdout");
+    if (!skip_baseline) {
+        std.debug.print("[muze] copying source tree -> {s}\n", .{runs_baseline.items});
+        try sandbox.copyTree(alloc, io, adapter.source_root, runs_baseline.items);
 
-    var base_stderr = std.ArrayList(u8).empty;
-    defer base_stderr.deinit(alloc);
-    try base_stderr.appendSlice(alloc, runs_baseline.items);
-    try base_stderr.appendSlice(alloc, "/build.stderr");
+        // --- Baseline build + smoke ---
+        var base_stdout = std.ArrayList(u8).empty;
+        defer base_stdout.deinit(alloc);
+        try base_stdout.appendSlice(alloc, runs_baseline.items);
+        try base_stdout.appendSlice(alloc, "/build.stdout");
 
-    std.debug.print("[muze] baseline build: {s}\n", .{adapter.baseline_build_cmd});
-    const br = try sandbox.exec(
-        alloc, io, adapter.baseline_build_cmd, runs_baseline.items,
-        adapter.build_timeout_s, base_stdout.items, base_stderr.items,
-    );
-    if (br.timed_out or br.exit_code != 0) {
-        std.debug.print("[muze] baseline build FAILED (exit={d}, sig={d}, timeout={})\n",
-            .{ br.exit_code, br.signal, br.timed_out });
-        return error.BaselineBuildFailed;
+        var base_stderr = std.ArrayList(u8).empty;
+        defer base_stderr.deinit(alloc);
+        try base_stderr.appendSlice(alloc, runs_baseline.items);
+        try base_stderr.appendSlice(alloc, "/build.stderr");
+
+        std.debug.print("[muze] baseline build: {s}\n", .{adapter.baseline_build_cmd});
+        const br = try sandbox.exec(
+            alloc, io, adapter.baseline_build_cmd, runs_baseline.items,
+            adapter.build_timeout_s, base_stdout.items, base_stderr.items,
+        );
+        if (br.timed_out or br.exit_code != 0) {
+            std.debug.print("[muze] baseline build FAILED (exit={d}, sig={d}, timeout={})\n",
+                .{ br.exit_code, br.signal, br.timed_out });
+            return error.BaselineBuildFailed;
+        }
+    } else {
+        std.debug.print("[muze] baseline already built at {s}, skipping baseline build\n", .{runs_baseline.items});
     }
 
     // --- Parse target files, find matches ---

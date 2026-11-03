@@ -24,11 +24,10 @@ fn compileMutant(alloc: std.mem.Allocator, io: std.Io, file_path: []const u8, wo
     const res = try sandbox.exec(alloc, io, cmd, worker_dir, 60, "/dev/null", "/dev/null");
     if (res.exit_code != 0) return error.CompileFailed;
     
-    const strip_cmd = try std.fmt.allocPrint(alloc, "objcopy --strip-debug {s} {s}.stripped", .{obj_target, obj_target});
-    _ = sandbox.exec(alloc, io, strip_cmd, worker_dir, 10, "/dev/null", "/dev/null") catch {};
-    alloc.free(strip_cmd);
     
-    return std.fmt.allocPrint(alloc, "{s}/{s}.stripped", .{worker_dir, obj_target});
+    
+    
+    return std.fmt.allocPrint(alloc, "{s}/{s}", .{worker_dir, obj_target});
 }
 
 fn linkTarget(alloc: std.mem.Allocator, io: std.Io, worker_dir: []const u8) anyerror!bool {
