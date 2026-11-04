@@ -28,6 +28,8 @@ pub const ToolAdapter = struct {
             return @import("../tools/gromacs.zig").adapter;
         if (std.mem.eql(u8, name_str, "iqtree"))
             return @import("../tools/iqtree.zig").adapter;
+        if (std.mem.eql(u8, name_str, "bwa"))
+            return @import("../tools/bwa.zig").adapter;
         return error.UnknownTool;
     }
 };

@@ -247,6 +247,401 @@ fn predBioProbSub(ir: *const IR, i: u32) bool {
            (std.mem.indexOf(u8, r_text, "freq") != null or std.mem.indexOf(u8, r_text, "mu") != null or std.mem.indexOf(u8, r_text, "exp") != null or std.mem.indexOf(u8, r_text, "diagonal") != null);
 }
 
+// BWA Short-Read Alignment & BWT Operators
+fn predBioBwtL2Plus(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "L2") != null or std.mem.indexOf(u8, r_text, "L2") != null or
+           std.mem.indexOf(u8, l_text, "ok") != null or std.mem.indexOf(u8, r_text, "ok") != null;
+}
+
+fn predBioBwtMatchLen(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "k") != null or std.mem.indexOf(u8, l_text, "l") != null) and
+           (std.mem.indexOf(u8, r_text, "1") != null);
+}
+
+fn predBioBwt2OccMinus(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "k") != null or std.mem.indexOf(u8, l_text, "tk") != null) and
+           (std.mem.indexOf(u8, r_text, "1") != null);
+}
+
+fn predBioBwtCompSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "3") != null) and
+           (std.mem.indexOf(u8, r_text, "q") != null or std.mem.indexOf(u8, r_text, "c") != null);
+}
+
+fn predBioBwtBaseCharGt(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "c") != null or std.mem.indexOf(u8, l_text, "q") != null) and
+           (std.mem.indexOf(u8, r_text, "3") != null);
+}
+
+fn predBioChainGapSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "len") != null or std.mem.indexOf(u8, r_text, "last") != null or
+           std.mem.indexOf(u8, l_text, "qbeg") != null or std.mem.indexOf(u8, l_text, "rbeg") != null;
+}
+
+fn predBioChainBandLe(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "<=")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "w") != null;
+}
+
+fn predBioChainGapLt(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "<")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "max_chain_gap") != null or std.mem.indexOf(u8, r_text, "opt->w") != null;
+}
+
+fn predBioSeedWeightSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "end") != null;
+}
+
+fn predBioKswOeDelSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "oe_del") != null or std.mem.indexOf(u8, r_text, "o_del") != null;
+}
+
+fn predBioKswOeInsSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "oe_ins") != null or std.mem.indexOf(u8, r_text, "o_ins") != null;
+}
+
+fn predBioKswEDelSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "e_del") != null;
+}
+
+fn predBioKswEInsSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "e_ins") != null;
+}
+
+fn predBioKswMatchAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "M") != null or std.mem.indexOf(u8, l_text, "H") != null) and
+           (std.mem.indexOf(u8, r_text, "q[") != null or std.mem.indexOf(u8, r_text, "mat") != null);
+}
+
+fn predBioKswBandBegSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "i") != null) and (std.mem.indexOf(u8, r_text, "w") != null);
+}
+
+fn predBioKswBandEndAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "i") != null) and (std.mem.indexOf(u8, r_text, "w") != null);
+}
+
+fn predBioGapScoreMmMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "s_mm") != null or std.mem.indexOf(u8, r_text, "s_gapo") != null or std.mem.indexOf(u8, r_text, "s_gape") != null;
+}
+
+fn predBioGapShadowSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "w[") != null or std.mem.indexOf(u8, l_text, "max") != null) and
+           (std.mem.indexOf(u8, r_text, "x") != null or std.mem.indexOf(u8, r_text, "j") != null);
+}
+
+fn predBioOptAMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "opt->a") != null or std.mem.indexOf(u8, r_text, "opt->a") != null;
+}
+
+fn predBioOptADiv(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "/")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "opt->a") != null or std.mem.indexOf(u8, r_text, "opt->a") != null;
+}
+
+fn predBioOptWAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "opt->w") != null or std.mem.indexOf(u8, r_text, "opt->w") != null or
+           std.mem.indexOf(u8, l_text, "w2") != null or std.mem.indexOf(u8, r_text, "w2") != null;
+}
+
+fn predBioSeedLenComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">") and !isBinaryOp(ir, i, ">=") and !isBinaryOp(ir, i, "<")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "min_seed_len") != null;
+}
+
+fn predBioMaxOccComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">") and !isBinaryOp(ir, i, ">=")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "max_occ") != null;
+}
+
+fn predBioScoreTComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">") and !isBinaryOp(ir, i, ">=") and !isBinaryOp(ir, i, "<")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "opt->T") != null;
+}
+
+fn predBioZdropComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">") and !isBinaryOp(ir, i, "<") and !isBinaryOp(ir, i, ">=")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "zdrop") != null;
+}
+
+fn predBioPenClipAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "pen_clip") != null or std.mem.indexOf(u8, r_text, "pen_clip") != null;
+}
+
+fn predBioBwtPrimaryComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "<=") and !isBinaryOp(ir, i, ">=")) return false;
+    const r = childAt(ir, i, 1);
+    if (r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "primary") != null;
+}
+
+fn predBioKswMaxScoreComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "h") != null or std.mem.indexOf(u8, l_text, "M") != null) and
+           (std.mem.indexOf(u8, r_text, "e") != null or std.mem.indexOf(u8, r_text, "f") != null);
+}
+
+fn predBioKswZeroComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "t") != null or std.mem.indexOf(u8, l_text, "h1") != null) and
+           (std.mem.indexOf(u8, r_text, "0") != null);
+}
+
+fn predBioBwtTlTkSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "tl") != null and std.mem.indexOf(u8, r_text, "tk") != null;
+}
+
+fn predBioBwtCumulativeAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "ok[") != null and std.mem.indexOf(u8, r_text, "ok[") != null;
+}
+
+fn predBioChainQendAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "qbeg") != null or std.mem.indexOf(u8, l_text, "rbeg") != null) and
+           (std.mem.indexOf(u8, r_text, "len") != null);
+}
+
+fn predBioChainWeightLenAdd(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "+")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "w") != null and std.mem.indexOf(u8, r_text, "s->len") != null;
+}
+
+fn predBioChainYDiffSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return (std.mem.indexOf(u8, l_text, "rbeg") != null and std.mem.indexOf(u8, r_text, "last->rbeg") != null) or
+           (std.mem.indexOf(u8, l_text, "qbeg") != null and std.mem.indexOf(u8, r_text, "last->qbeg") != null);
+}
+
+fn predBioKswHfGt(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "h") != null and std.mem.indexOf(u8, r_text, "f") != null;
+}
+
+fn predBioKswGscoreGt(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "gscore") != null and std.mem.indexOf(u8, r_text, "h1") != null;
+}
+
+fn predBioGapBestGt(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "best") != null and std.mem.indexOf(u8, r_text, "score") != null;
+}
+
+fn predBioSplitFactorMul(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "*")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, r_text, "split_factor") != null;
+}
+
+fn predBioBnsLpacComp(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, ">=") and !isBinaryOp(ir, i, "<=") and !isBinaryOp(ir, i, "<") and !isBinaryOp(ir, i, ">")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "l_pac") != null or std.mem.indexOf(u8, r_text, "l_pac") != null;
+}
+
+fn predBioBnsCoordSub(ir: *const IR, i: u32) bool {
+    if (!isBinaryOp(ir, i, "-")) return false;
+    const l = childAt(ir, i, 0);
+    const r = childAt(ir, i, 1);
+    if (l == NIL or r == NIL) return false;
+    const l_text = ir.nodeSlice(l);
+    const r_text = ir.nodeSlice(r);
+    return std.mem.indexOf(u8, l_text, "l_pac") != null or std.mem.indexOf(u8, r_text, "end") != null or std.mem.indexOf(u8, r_text, "beg") != null;
+}
+
 pub const all = [_]Operator{
 
     .{ .name = "AOR: != to ==", .class = .aor, .langs = &.{ .c, .cpp }, .predicate = predNeq, .replacement = "==" },
@@ -351,4 +746,67 @@ pub const all = [_]Operator{
     .{ .name = "BIO: Sequence Alphabet DNA to Protein", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("SEQ_DNA"), .replacement = "SEQ_PROTEIN" },
     .{ .name = "BIO: Invariable Sites Bound Tolerance Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("MIN_PINVAR"), .replacement = "TOL_PINVAR" },
     .{ .name = "BIO: Zero Frequency Threshold Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("ZERO_FREQ"), .replacement = "MIN_RATE" },
+
+    // BWA Short-Read Alignment & BWT Operators
+    .{ .name = "BIO: FM-Index Interval Lower Bound Plus to Minus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtL2Plus, .replacement = "-" },
+    .{ .name = "BIO: BWT Suffix Match Length Plus to Minus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtMatchLen, .replacement = "-" },
+    .{ .name = "BIO: BWT 2Occ Interval Query Rank Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwt2OccMinus, .replacement = "+" },
+    .{ .name = "BIO: BWT Complement Base Calculation Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtCompSub, .replacement = "+" },
+    .{ .name = "BIO: BWT Base Character Alphabet Bound Greater to GreaterEqual", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtBaseCharGt, .replacement = ">=" },
+    .{ .name = "BIO: BWA-MEM Chaining Distance Gap Subtraction to Addition", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainGapSub, .replacement = "+" },
+    .{ .name = "BIO: BWA-MEM Chaining Band Width LessEqual to GreaterEqual", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainBandLe, .replacement = ">=" },
+    .{ .name = "BIO: BWA-MEM Chaining Max Gap LessThan to GreaterThan", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainGapLt, .replacement = ">" },
+    .{ .name = "BIO: BWA-MEM Seed Weight Overlap Deduction Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioSeedWeightSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Deletion Open+Extend Deduction Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswOeDelSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Insertion Open+Extend Deduction Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswOeInsSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Deletion Extension Cost Deduction Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswEDelSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Insertion Extension Cost Deduction Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswEInsSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Dynamic Programming Match Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswMatchAdd, .replacement = "-" },
+    .{ .name = "BIO: KSW Band Left Clamping Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswBandBegSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Band Right Clamping Plus to Minus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswBandEndAdd, .replacement = "-" },
+    .{ .name = "BIO: BWT-GAP Alignment Mismatch Score Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGapScoreMmMul, .replacement = "/" },
+    .{ .name = "BIO: BWT-GAP Shadow Width Subtraction to Addition", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGapShadowSub, .replacement = "+" },
+    .{ .name = "BIO: BWA Deletion to Insertion Open Cost Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("o_del"), .replacement = "o_ins" },
+    .{ .name = "BIO: BWA Insertion to Deletion Open Cost Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("o_ins"), .replacement = "o_del" },
+    .{ .name = "BIO: BWA Deletion to Insertion Extension Cost Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("e_del"), .replacement = "e_ins" },
+    .{ .name = "BIO: BWA Insertion to Deletion Extension Cost Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("e_ins"), .replacement = "e_del" },
+    .{ .name = "BIO: BWA Match Score Scaling Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioOptAMul, .replacement = "/" },
+    .{ .name = "BIO: BWA Match Score Scaling Divide to Multiply", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioOptADiv, .replacement = "*" },
+    .{ .name = "BIO: BWA Band Width Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioOptWAdd, .replacement = "-" },
+    .{ .name = "BIO: BWA Minimum Seed Length Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioSeedLenComp, .replacement = "<" },
+    .{ .name = "BIO: BWA Maximum Occurrence Filter Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioMaxOccComp, .replacement = "<" },
+    .{ .name = "BIO: BWA Score Threshold Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioScoreTComp, .replacement = "<" },
+    .{ .name = "BIO: BWA Z-drop Extension Check Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioZdropComp, .replacement = "<" },
+    .{ .name = "BIO: BWA Clipping Penalty Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioPenClipAdd, .replacement = "-" },
+    .{ .name = "BIO: BWT Primary Index Comparison Bound Inversion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtPrimaryComp, .replacement = ">" },
+    .{ .name = "BIO: KSW Score Maximum Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswMaxScoreComp, .replacement = "<" },
+    .{ .name = "BIO: KSW Score Floor Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswZeroComp, .replacement = "<" },
+    .{ .name = "BIO: BWA Seed Length Identifier to Split Width", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("min_seed_len"), .replacement = "split_width" },
+    .{ .name = "BIO: BWA Max Chain Gap Identifier to Max Ins", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("max_chain_gap"), .replacement = "max_ins" },
+    .{ .name = "BIO: BWA Clip 5-prime to 3-prime Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("pen_clip5"), .replacement = "pen_clip3" },
+    .{ .name = "BIO: BWA Clip 3-prime to 5-prime Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("pen_clip3"), .replacement = "pen_clip5" },
+    .{ .name = "BIO: BWT-GAP State Insertion to Deletion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("STATE_I"), .replacement = "STATE_D" },
+    .{ .name = "BIO: BWT-GAP State Deletion to Insertion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("STATE_D"), .replacement = "STATE_I" },
+    .{ .name = "BIO: BWT-GAP State Match to Insertion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("STATE_M"), .replacement = "STATE_I" },
+    .{ .name = "BIO: BWT Interval Width Difference Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtTlTkSub, .replacement = "+" },
+    .{ .name = "BIO: BWT Forward Interval Cumulative Add to Sub", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBwtCumulativeAdd, .replacement = "-" },
+    .{ .name = "BIO: BWA-MEM Seed Coordinate Range Plus to Minus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainQendAdd, .replacement = "-" },
+    .{ .name = "BIO: BWA-MEM Chain Weight Length Addition to Subtraction", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainWeightLenAdd, .replacement = "-" },
+    .{ .name = "BIO: BWA-MEM Seed Distance Difference Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioChainYDiffSub, .replacement = "+" },
+    .{ .name = "BIO: KSW Score F-matrix Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswHfGt, .replacement = "<" },
+    .{ .name = "BIO: KSW Global Score Max Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioKswGscoreGt, .replacement = "<" },
+    .{ .name = "BIO: BWT-GAP Stack Best Score Comparison Greater to Less", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioGapBestGt, .replacement = "<" },
+    .{ .name = "BIO: BWA Mismatch Penalty Identifier to Match Score", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("opt->b"), .replacement = "opt->a" },
+    .{ .name = "BIO: BWA Band Width Identifier to Z-drop", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("opt->w"), .replacement = "opt->zdrop" },
+    .{ .name = "BIO: BWA Z-drop Identifier to Band Width", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("opt->zdrop"), .replacement = "opt->w" },
+    .{ .name = "BIO: BWA Max Matesw Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("max_matesw"), .replacement = "max_occ" },
+    .{ .name = "BIO: BWA Mask Level Identifier to Redundant Mask Level", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("mask_level"), .replacement = "mask_level_redun" },
+    .{ .name = "BIO: BWA Secondary Drop Ratio Identifier to XA Drop Ratio", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("drop_ratio"), .replacement = "XA_drop_ratio" },
+    .{ .name = "BIO: BWA Max MEM Interval Identifier to Split Width", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("max_mem_intv"), .replacement = "split_width" },
+    .{ .name = "BIO: BWA Pen Unpaired Identifier to Pen Clip5", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("pen_unpaired"), .replacement = "pen_clip5" },
+    .{ .name = "BIO: BWA Split Factor Scaling Multiply to Divide", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioSplitFactorMul, .replacement = "/" },
+    .{ .name = "BIO: BNS Reference Coordinate pac Comparison Bound Inversion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBnsLpacComp, .replacement = "==" },
+    .{ .name = "BIO: BNS Reverse Strand Coordinate Offset Minus to Plus", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = predBioBnsCoordSub, .replacement = "+" },
+    .{ .name = "BIO: BWA Alignment Score Flag Tag Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("NM"), .replacement = "AS" },
+    .{ .name = "BIO: BWA CIGAR Length Shift", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("n_cigar"), .replacement = "n_cigar_" },
 };
