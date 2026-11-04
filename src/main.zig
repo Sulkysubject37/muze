@@ -213,7 +213,7 @@ pub fn main(init: std.process.Init) !void {
     var test_file = std.ArrayList(u8).empty;
     defer test_file.deinit(alloc);
     try test_file.appendSlice(alloc, runs_baseline.items);
-    if (std.mem.eql(u8, adapter.name, "gromacs") or std.mem.eql(u8, adapter.name, "iqtree")) {
+    if (std.mem.eql(u8, adapter.name, "gromacs") or std.mem.eql(u8, adapter.name, "iqtree") or std.mem.eql(u8, adapter.name, "raxml")) {
         try test_file.appendSlice(alloc, "/build/compile_commands.json");
     } else if (std.mem.eql(u8, adapter.name, "bwa")) {
         try test_file.appendSlice(alloc, "/bwa");

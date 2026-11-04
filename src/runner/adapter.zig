@@ -30,6 +30,8 @@ pub const ToolAdapter = struct {
             return @import("../tools/iqtree.zig").adapter;
         if (std.mem.eql(u8, name_str, "bwa"))
             return @import("../tools/bwa.zig").adapter;
+        if (std.mem.eql(u8, name_str, "raxml"))
+            return @import("../tools/raxml.zig").adapter;
         return error.UnknownTool;
     }
 };
