@@ -217,6 +217,8 @@ pub fn main(init: std.process.Init) !void {
         try test_file.appendSlice(alloc, "/build/compile_commands.json");
     } else if (std.mem.eql(u8, adapter.name, "bwa")) {
         try test_file.appendSlice(alloc, "/bwa");
+    } else if (std.mem.eql(u8, adapter.name, "kraken2")) {
+        try test_file.appendSlice(alloc, "/bin/classify");
     } else {
         try test_file.appendSlice(alloc, "/samtools");
     }
