@@ -23,11 +23,7 @@ fn compileMutant(alloc: std.mem.Allocator, io: std.Io, file_path: []const u8, wo
     }
     const obj_file = std.fmt.bufPrint(&obj_buf, "{s}.o", .{file_path[0..base_len]}) catch return error.CompileFailed;
 
-    const rm_cmd = try std.fmt.allocPrint(alloc, "rm -f {s}", .{obj_file});
-    defer alloc.free(rm_cmd);
-    _ = sandbox.exec(alloc, io, rm_cmd, worker_dir, 10, "/dev/null", "/dev/null") catch {};
-
-    const compile_cmd = try std.fmt.allocPrint(alloc, "c++ -Wall -std=c++11 -O3 -fPIC -g -DLINEAR_PROBING -ffile-prefix-map={s}=. -c -o {s} {s}", .{ worker_dir, obj_file, file_path });
+    const compile_cmd = try std.fmt.allocPrint(alloc, "c++ -Wall -std=c++11 -O3 -fPIC -g -DLINEAR_PROBING -ffile-prefix-map={s}=. -c -o {s}.tmp {s} && mv -f {s}.tmp {s}", .{ worker_dir, obj_file, file_path, obj_file, obj_file });
     defer alloc.free(compile_cmd);
 
     const res = try sandbox.exec(alloc, io, compile_cmd, worker_dir, 60, "/dev/null", "/dev/null");
@@ -43,7 +39,7 @@ fn linkTarget(alloc: std.mem.Allocator, io: std.Io, worker_dir: []const u8) anye
 }
 
 fn runTests(alloc: std.mem.Allocator, io: std.Io, worker_dir: []const u8) anyerror!classify.Verdict {
-    const run_cmd = "rm -f out_classify.txt && ./bin/classify -H test_db/hash.k2d -t test_db/taxo.k2d -o test_db/opts.k2d test_data/test_reads.fa > out_classify.txt 2>/dev/null";
+    const run_cmd = "rm -f out_classify.txt out_report.txt && ./bin/classify -H test_db/hash.k2d -t test_db/taxo.k2d -o test_db/opts.k2d -R out_report.txt -K test_data/test_reads.fa > out_classify.txt 2>/dev/null";
     const res = try sandbox.exec(alloc, io, run_cmd, worker_dir, 15, "/dev/null", "/dev/null");
     if (res.timed_out) return .timeout;
     if (res.exit_code != 0) return .killed;
@@ -61,6 +57,20 @@ fn runTests(alloc: std.mem.Allocator, io: std.Io, worker_dir: []const u8) anyerr
     const vres = try sandbox.exec(alloc, io, verify_cmd, worker_dir, 10, "/dev/null", "/dev/null");
     if (vres.exit_code != 0) return .killed;
 
+    const verify_rep = 
+        \\awk '
+        \\$7 == 2697049 { r1++ }
+        \\$7 == 11676   { r2++ }
+        \\$7 == 10710   { r3++ }
+        \\$7 == 10239   { r4++ }
+        \\END {
+        \\  if (r1 >= 1 && r2 >= 1 && r3 >= 1 && r4 >= 1) exit 0;
+        \\  exit 1;
+        \\}' out_report.txt
+    ;
+    const rres = try sandbox.exec(alloc, io, verify_rep, worker_dir, 10, "/dev/null", "/dev/null");
+    if (rres.exit_code != 0) return .killed;
+
     return .survived;
 }
 
@@ -74,7 +84,9 @@ pub const adapter = ToolAdapter{
         "src/classify.cc",
         "src/reports.cc",
         "src/aa_translate.cc",
-        "src/seqreader.cc",
+        "src/utilities.cc",
+        "src/mmap_file.cc",
+        "src/hyperloglogplus.cc",
     },
     .skip_dirs = &.{ "data", "docs", "scripts" },
     .extensions = &.{ ".cc", ".cpp", ".c" },
