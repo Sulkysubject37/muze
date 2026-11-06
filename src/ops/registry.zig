@@ -860,4 +860,13 @@ pub const all = [_]Operator{
     .{ .name = "BIO: Kraken2 HLL Use Observed Cardinality Override to False", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("use_n_observed"), .replacement = "false" },
     .{ .name = "BIO: Kraken2 HLL Sparse Precision to Normal Precision Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("pPrime"), .replacement = "p" },
     .{ .name = "BIO: Kraken2 HLL Sparse Registers to Normal Registers Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("mPrime"), .replacement = "m" },
+    // Kallisto Domain Biological Operators
+    .{ .name = "BIO: Kallisto Single-End to Long-Read Flag Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("single_end"), .replacement = "long_read" },
+    .{ .name = "BIO: Kallisto Has Mean FL to Truncated Mean Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("has_mean_fl"), .replacement = "has_mean_fl_trunc" },
+    .{ .name = "BIO: Kallisto Truncated Mean to Has Mean FL Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("has_mean_fl_trunc"), .replacement = "has_mean_fl" },
+    .{ .name = "BIO: Kallisto Bias Alpha Norm to Data Norm Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("biasAlphaNorm"), .replacement = "biasDataNorm" },
+    .{ .name = "BIO: Kallisto Bias Data Norm to Alpha Norm Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("biasDataNorm"), .replacement = "biasAlphaNorm" },
+    .{ .name = "BIO: Kallisto Mapped Reads to Total Reads Counter Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("nummapped"), .replacement = "numreads" },
+    .{ .name = "BIO: Kallisto Shading Model to Union Heuristic Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("use_shade"), .replacement = "do_union" },
+    .{ .name = "BIO: Kallisto Maximum Fragment Length Bound Truncation", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("MAX_FRAG_LEN"), .replacement = "500" },
 };

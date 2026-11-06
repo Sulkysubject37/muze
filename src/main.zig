@@ -219,6 +219,8 @@ pub fn main(init: std.process.Init) !void {
         try test_file.appendSlice(alloc, "/bwa");
     } else if (std.mem.eql(u8, adapter.name, "kraken2")) {
         try test_file.appendSlice(alloc, "/bin/classify");
+    } else if (std.mem.eql(u8, adapter.name, "kallisto")) {
+        try test_file.appendSlice(alloc, "/build/src/kallisto");
     } else {
         try test_file.appendSlice(alloc, "/samtools");
     }

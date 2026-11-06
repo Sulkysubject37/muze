@@ -34,6 +34,8 @@ pub const ToolAdapter = struct {
             return @import("../tools/raxml.zig").adapter;
         if (std.mem.eql(u8, name_str, "kraken2"))
             return @import("../tools/kraken2.zig").adapter;
+        if (std.mem.eql(u8, name_str, "kallisto"))
+            return @import("../tools/kallisto.zig").adapter;
         return error.UnknownTool;
     }
 };
