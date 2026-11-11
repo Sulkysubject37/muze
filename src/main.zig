@@ -223,6 +223,8 @@ pub fn main(init: std.process.Init) !void {
         try test_file.appendSlice(alloc, "/build/src/kallisto");
     } else if (std.mem.eql(u8, adapter.name, "jellyfish")) {
         try test_file.appendSlice(alloc, "/bin/.libs/jellyfish");
+    } else if (std.mem.eql(u8, adapter.name, "foldseek")) {
+        try test_file.appendSlice(alloc, "/build/src/foldseek");
     } else {
         try test_file.appendSlice(alloc, "/samtools");
     }
