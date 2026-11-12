@@ -644,13 +644,13 @@ fn predBioBnsCoordSub(ir: *const IR, i: u32) bool {
 
 pub const all = [_]Operator{
 
-    .{ .name = "AOR: != to ==", .class = .aor, .langs = &.{ .c, .cpp }, .predicate = predNeq, .replacement = "==" },
-    .{ .name = "LCR: + to -", .class = .lcr, .langs = &.{ .c, .cpp }, .predicate = predPlus, .replacement = "-" },
-    .{ .name = "LCR: - to +", .class = .lcr, .langs = &.{ .c, .cpp }, .predicate = predMinus, .replacement = "+" },
-    .{ .name = "BIT: & to |", .class = .bit, .langs = &.{ .c, .cpp }, .predicate = predBitAnd, .replacement = "|" },
-    .{ .name = "BIT: | to &", .class = .bit, .langs = &.{ .c, .cpp }, .predicate = predBitOr, .replacement = "&" },
-    .{ .name = "LOG: && to ||", .class = .log, .langs = &.{ .c, .cpp }, .predicate = predLogAnd, .replacement = "||" },
-    .{ .name = "LOG: || to &&", .class = .log, .langs = &.{ .c, .cpp }, .predicate = predLogOr, .replacement = "&&" },
+    .{ .name = "AOR: != to ==", .class = .aor, .langs = &.{ .c, .cpp, .rust }, .predicate = predNeq, .replacement = "==" },
+    .{ .name = "LCR: + to -", .class = .lcr, .langs = &.{ .c, .cpp, .rust }, .predicate = predPlus, .replacement = "-" },
+    .{ .name = "LCR: - to +", .class = .lcr, .langs = &.{ .c, .cpp, .rust }, .predicate = predMinus, .replacement = "+" },
+    .{ .name = "BIT: & to |", .class = .bit, .langs = &.{ .c, .cpp, .rust }, .predicate = predBitAnd, .replacement = "|" },
+    .{ .name = "BIT: | to &", .class = .bit, .langs = &.{ .c, .cpp, .rust }, .predicate = predBitOr, .replacement = "&" },
+    .{ .name = "LOG: && to ||", .class = .log, .langs = &.{ .c, .cpp, .rust }, .predicate = predLogAnd, .replacement = "||" },
+    .{ .name = "LOG: || to &&", .class = .log, .langs = &.{ .c, .cpp, .rust }, .predicate = predLogOr, .replacement = "&&" },
     
     .{ .name = "BIO: BAM_FPAIRED to BAM_FREVERSE", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("BAM_FPAIRED"), .replacement = "BAM_FREVERSE" },
     .{ .name = "BIO: BAM_FPAIRED to BAM_FPROPER_PAIR", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("BAM_FPAIRED"), .replacement = "BAM_FPROPER_PAIR" },
@@ -914,4 +914,18 @@ pub const all = [_]Operator{
     .{ .name = "BIO: Foldseek 3Di to Amino Acid Substitution Matrix Swap", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("subMat3Di"), .replacement = "subMatAA" },
     .{ .name = "BIO: Foldseek TM-Score Filter Threshold Inversion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("tmScoreThr"), .replacement = "0.5" },
     .{ .name = "BIO: Foldseek LDDT Score Filter Threshold Inversion", .class = .bio, .langs = &.{ .c, .cpp }, .predicate = makeIdentPred("lddtThr"), .replacement = "0.5" },
+    // Salmon Domain Biological Operators
+    .{ .name = "BIO: Salmon Forgetting Factor Inversion", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("forgetting_factor"), .replacement = "1.0" },
+    .{ .name = "BIO: Salmon Burn-in Fragments Truncation", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("burnin_frags"), .replacement = "1" },
+    .{ .name = "BIO: Salmon Prior Mass Reset", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("prior_mass"), .replacement = "mass" },
+    .{ .name = "BIO: Salmon Effective Lengths Bypass", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("eff_lengths"), .replacement = "lengths" },
+    .{ .name = "BIO: Salmon Fragment Length Distribution Pointer Swap", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("frag_len_dist"), .replacement = "bias_dump" },
+    .{ .name = "BIO: Salmon Equivalence Class Total Count Clamping", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("total_count"), .replacement = "1" },
+    .{ .name = "BIO: Salmon Num Equivalence Classes Clamping", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("num_classes"), .replacement = "1" },
+    .{ .name = "BIO: Salmon Read Type Inversion Paired to Single", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("PairedEnd"), .replacement = "SingleEnd" },
+    .{ .name = "BIO: Salmon Read Orientation Inversion Toward to Away", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("Toward"), .replacement = "Away" },
+    .{ .name = "BIO: Salmon Abundance TPM to Counts Swap", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("tpm"), .replacement = "counts" },
+    .{ .name = "BIO: Salmon Log-Zero Probability Inversion", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("LOG_0"), .replacement = "LOG_1" },
+    .{ .name = "BIO: Salmon Log-One Probability Inversion", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("LOG_1"), .replacement = "LOG_0" },
+    .{ .name = "BIO: Salmon Log-Epsilon Threshold Clamp", .class = .bio, .langs = &.{ .rust }, .predicate = makeIdentPred("LOG_EPSILON"), .replacement = "LOG_1" },
 };

@@ -40,6 +40,8 @@ pub const ToolAdapter = struct {
             return @import("../tools/jellyfish.zig").adapter;
         if (std.mem.eql(u8, name_str, "foldseek"))
             return @import("../tools/foldseek.zig").adapter;
+        if (std.mem.eql(u8, name_str, "salmon"))
+            return @import("../tools/salmon.zig").adapter;
         return error.UnknownTool;
     }
 };

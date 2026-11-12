@@ -63,7 +63,6 @@ fn workerMain(ctx: WorkerContext) void {
         const work_file = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{worker_dir, entry.file_path}) catch continue;
         defer ctx.alloc.free(base_file);
         defer ctx.alloc.free(work_file);
-        
         defer std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = entry.source }) catch {};
 
         const mutant_source = splice(ctx.alloc, entry.source, entry.m, op.replacement) catch continue;
@@ -169,12 +168,15 @@ pub fn main(init: std.process.Init) !void {
 
     var tool_name: []const u8 = "samtools";
     var limit: u32 = std.math.maxInt(u32);
+    var dry_run: bool = false;
 
     while (args.next()) |a| {
         if (std.mem.eql(u8, a, "--tool")) {
             tool_name = args.next() orelse return error.MissingTool;
         } else if (std.mem.eql(u8, a, "--limit")) {
             limit = try std.fmt.parseInt(u32, args.next() orelse "0", 10);
+        } else if (std.mem.eql(u8, a, "--dry-run")) {
+            dry_run = true;
         }
     }
 
@@ -225,6 +227,8 @@ pub fn main(init: std.process.Init) !void {
         try test_file.appendSlice(alloc, "/bin/.libs/jellyfish");
     } else if (std.mem.eql(u8, adapter.name, "foldseek")) {
         try test_file.appendSlice(alloc, "/build/src/foldseek");
+    } else if (std.mem.eql(u8, adapter.name, "salmon")) {
+        try test_file.appendSlice(alloc, "/target/debug/salmon");
     } else {
         try test_file.appendSlice(alloc, "/samtools");
     }
@@ -336,6 +340,19 @@ pub fn main(init: std.process.Init) !void {
         }
     }
     std.debug.print("[muze] total matches: {d} (bio: {d}, generic: {d})\n", .{ all_matches.items.len, bio_count, gen_count });
+    if (dry_run) {
+        var op_counts = [_]usize{0} ** registry.all.len;
+        for (all_matches.items) |entry| {
+            op_counts[entry.op_idx] += 1;
+        }
+        std.debug.print("--- Operator Breakdown ---\n", .{});
+        for (registry.all, 0..) |op, oi| {
+            if (op_counts[oi] > 0) {
+                std.debug.print("{s} [{s}]: {d}\n", .{ op.name, @tagName(op.class), op_counts[oi] });
+            }
+        }
+        return;
+    }
 
         // --- Generate and run mutants ---
     const cpu_count: usize = adapter.max_workers;
