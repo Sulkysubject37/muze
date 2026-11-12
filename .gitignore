@@ -1,5 +1,38 @@
+# Run outputs and cache
 runs/
 .zig-cache/
 zig-out/
+
+# Manuscript directories & TeX outputs
+manu_muze/
+man_muze/
+manu_muze
+man_muze
+*.pdf
+*.log
+*.aux
+*.out
+
+# External tool sources (submodules / symlinks handled independently)
 external/gromacs
 external/iqtree
+
+# Compiled objects, assembly, and LLVM IR
+*.o
+*.obj
+*.ll
+*.bc
+*.asm
+*.s
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.orig
+*.swp
+*~
+.DS_Store
+
+# Scratch files and run logs
+scratch*
+logs/
