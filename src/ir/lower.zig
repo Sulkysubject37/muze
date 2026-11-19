@@ -90,7 +90,7 @@ fn classifyC(name: []const u8) Kind {
     if (eq(u8, name, "for_statement"))          return .for_stmt;
     if (eq(u8, name, "return_statement"))       return .return_stmt;
     if (eq(u8, name, "function_definition"))    return .fn_decl;
-    if (eq(u8, name, "identifier"))             return .identifier;
+    if (eq(u8, name, "identifier") or eq(u8, name, "field_identifier")) return .identifier;
     if (eq(u8, name, "number_literal"))         return .int_lit;
     if (eq(u8, name, "string_literal"))         return .string_lit;
     if (eq(u8, name, "call_expression"))        return .call;
@@ -111,7 +111,7 @@ fn classifyRust(name: []const u8) Kind {
     if (eq(u8, name, "for_expression"))         return .for_stmt;
     if (eq(u8, name, "return_expression"))      return .return_stmt;
     if (eq(u8, name, "function_item"))          return .fn_decl;
-    if (eq(u8, name, "identifier"))             return .identifier;
+    if (eq(u8, name, "identifier") or eq(u8, name, "field_identifier")) return .identifier;
     if (eq(u8, name, "integer_literal"))        return .int_lit;
     if (eq(u8, name, "float_literal"))          return .float_lit;
     if (eq(u8, name, "string_literal"))         return .string_lit;

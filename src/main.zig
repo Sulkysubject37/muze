@@ -7,7 +7,7 @@ const registry = @import("ops/registry.zig");
 const match = @import("ops/match.zig");
 const splice = @import("patch/splice.zig").splice;
 
-const Adapter = @import("runner/adapter.zig").Adapter;
+const ToolAdapter = @import("runner/adapter.zig").ToolAdapter;
 const sandbox = @import("runner/sandbox.zig");
 const classify = @import("runner/classify.zig");
 const test_suite = @import("oracle/test_suite.zig");
@@ -28,7 +28,8 @@ const WorkerResult = struct {
 const WorkerContext = struct {
     alloc: std.mem.Allocator,
     io: std.Io,
-    adapter: Adapter,
+    adapter: ToolAdapter,
+    worker_id: usize,
     runs_root: []const u8,
     runs_baseline: []const u8,
     matches_chunk: []const MatchEntry,
@@ -46,77 +47,71 @@ const MatchEntry = struct {
 };
 
 fn workerMain(ctx: WorkerContext) void {
+    const worker_dir = std.fmt.allocPrint(ctx.alloc, "{s}/workers/w{d}", .{ctx.runs_root, ctx.worker_id}) catch return;
+    defer ctx.alloc.free(worker_dir);
+
+    ctx.adapter.initWorker(ctx.alloc, ctx.io, worker_dir, ctx.runs_baseline) catch |err| {
+        std.debug.print("worker {d} init failed: {}\n", .{ctx.worker_id, err});
+        return;
+    };
+
     for (ctx.matches_chunk, 0..) |entry, i| {
         const op = registry.all[entry.op_idx];
         const mutant_id = ctx.start_idx + i;
 
-        const mutant_dir_slice = std.fmt.allocPrint(ctx.alloc, "{s}/mutants/{d}", .{ctx.runs_root, mutant_id}) catch continue;
-        defer ctx.alloc.free(mutant_dir_slice);
-
-        sandbox.copyTree(ctx.alloc, ctx.io, ctx.runs_baseline, mutant_dir_slice) catch continue;
+        const base_file = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{ctx.runs_baseline, entry.file_path}) catch continue;
+        const work_file = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{worker_dir, entry.file_path}) catch continue;
+        defer ctx.alloc.free(base_file);
+        defer ctx.alloc.free(work_file);
+        defer std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = entry.source }) catch {};
 
         const mutant_source = splice(ctx.alloc, entry.source, entry.m, op.replacement) catch continue;
         defer ctx.alloc.free(mutant_source);
 
-        const target_file_slice = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{mutant_dir_slice, entry.file_path}) catch continue;
-        defer ctx.alloc.free(target_file_slice);
+        std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = mutant_source }) catch continue;
 
-        std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = target_file_slice, .data = mutant_source }) catch continue;
-
-        var verdict = @import("runner/classify.zig").Verdict.invalid;
+        var verdict = classify.Verdict.invalid;
         var tce_eq = false;
-
-        const obj_target = std.fmt.allocPrint(ctx.alloc, "{s}o", .{entry.file_path[0 .. entry.file_path.len - 1]}) catch continue;
-        defer ctx.alloc.free(obj_target);
 
         var base_hash_opt: ?[32]u8 = null;
         if (ctx.res.baseline_hashes.get(entry.file_path)) |h| {
             base_hash_opt = h;
         } else {
-            const base_obj_path = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{ctx.runs_baseline, obj_target}) catch continue;
-            defer ctx.alloc.free(base_obj_path);
-            if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), base_obj_path)) |hash| {
-                ctx.res.baseline_hashes.put(entry.file_path, hash) catch {};
-                base_hash_opt = hash;
+            std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = entry.source }) catch continue; 
+            if (ctx.adapter.compileMutant(ctx.alloc, ctx.io, entry.file_path, worker_dir)) |base_obj| {
+                defer ctx.alloc.free(base_obj);
+                if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), base_obj)) |hash| {
+                    ctx.res.baseline_hashes.put(entry.file_path, hash) catch {};
+                    base_hash_opt = hash;
+                } else |_| {}
             } else |_| {}
+            std.Io.Dir.cwd().writeFile(ctx.io, .{ .sub_path = work_file, .data = mutant_source }) catch continue;
         }
 
-        const mut_rm_cmd = std.fmt.allocPrint(ctx.alloc, "rm -f {s}", .{obj_target}) catch continue;
-        _ = sandbox.exec(ctx.alloc, ctx.io, mut_rm_cmd, mutant_dir_slice, 10, "/dev/null", "/dev/null") catch {};
-        ctx.alloc.free(mut_rm_cmd);
-
-        const mut_cmd = std.fmt.allocPrint(ctx.alloc, "make CC=\"ccache gcc\" {s} CFLAGS=\"-O3\"", .{obj_target}) catch continue;
-        defer ctx.alloc.free(mut_cmd);
-        
-        const mut_tce_res = sandbox.exec(ctx.alloc, ctx.io, mut_cmd, mutant_dir_slice, 60, "/dev/null", "/dev/null") catch continue;
-        
-        if (mut_tce_res.exit_code == 0) {
-            const mut_obj_path = std.fmt.allocPrint(ctx.alloc, "{s}/{s}", .{mutant_dir_slice, obj_target}) catch continue;
-            defer ctx.alloc.free(mut_obj_path);
-            if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), mut_obj_path)) |mut_hash| {
+        if (ctx.adapter.compileMutant(ctx.alloc, ctx.io, entry.file_path, worker_dir)) |mut_obj| {
+            defer ctx.alloc.free(mut_obj);
+            if (tce.hashFile(ctx.alloc, ctx.io, std.Io.Dir.cwd(), mut_obj)) |mut_hash| {
                 if (base_hash_opt) |base_hash| {
                     if (std.mem.eql(u8, &base_hash, &mut_hash)) {
                         tce_eq = true;
                     }
                 }
             } else |_| {}
-        }
+            
+            if (!tce_eq) {
+                if (ctx.adapter.linkTarget(ctx.alloc, ctx.io, worker_dir)) |success| {
+                    if (success) {
+                        verdict = ctx.adapter.runTests(ctx.alloc, ctx.io, worker_dir) catch .invalid;
+                    }
+                } else |_| {}
+            }
+        } else |_| {}
 
         std.debug.print("[muze] mutant {d}: {s} {s} (node {d})", .{ mutant_id, entry.file_path, op.name, entry.m.node_idx });
-        if (mut_tce_res.exit_code != 0) {
-            verdict = .invalid;
-            std.debug.print(" -> invalid\n", .{});
-            ctx.res.invalid += 1;
-        } else if (tce_eq) {
+        if (tce_eq) {
             ctx.res.tce_discard += 1;
             std.debug.print(" -> tce equivalent\n", .{});
-            const rm_dir_cmd = std.fmt.allocPrint(ctx.alloc, "rm -rf {s}", .{mutant_dir_slice}) catch continue;
-            _ = sandbox.exec(ctx.alloc, ctx.io, rm_dir_cmd, ".", 10, "/dev/null", "/dev/null") catch {};
-            ctx.alloc.free(rm_dir_cmd);
-            continue;
         } else {
-            verdict = test_suite.run(ctx.alloc, ctx.io, ctx.adapter, mutant_dir_slice, mutant_dir_slice) catch continue;
-            
             std.debug.print(" -> {s}\n", .{@tagName(verdict)});
             switch (verdict) {
                 .killed   => ctx.res.killed += 1,
@@ -124,19 +119,17 @@ fn workerMain(ctx: WorkerContext) void {
                 .invalid  => ctx.res.invalid += 1,
                 .timeout  => ctx.res.timed_out += 1,
             }
-        }
-        
-        ctx.res.records.append(ctx.alloc, .{
-            .id = @intCast(mutant_id),
-            .file = entry.file_path,
-            .operator = op.name,
-            .class = @tagName(op.class),
-            .op_start = entry.m.op_start,
-            .op_end = entry.m.op_end,
-            .verdict = @tagName(verdict),
-        }) catch {};
-        
-        {
+            
+            ctx.res.records.append(ctx.alloc, .{
+                .id = @intCast(mutant_id),
+                .file = entry.file_path,
+                .operator = op.name,
+                .class = @tagName(op.class),
+                .op_start = entry.m.op_start,
+                .op_end = entry.m.op_end,
+                .verdict = @tagName(verdict),
+            }) catch {};
+            
             while (ctx.csv_lock.cmpxchgWeak(0, 1, .acquire, .monotonic) != null) {}
             defer ctx.csv_lock.store(0, .release);
             
@@ -159,10 +152,6 @@ fn workerMain(ctx: WorkerContext) void {
                 file.writePositionalAll(ctx.io, line, stat.size) catch {};
             } else |_| {}
         }
-        
-        const rm_dir_cmd = std.fmt.allocPrint(ctx.alloc, "rm -rf {s}", .{mutant_dir_slice}) catch continue;
-        _ = sandbox.exec(ctx.alloc, ctx.io, rm_dir_cmd, ".", 10, "/dev/null", "/dev/null") catch {};
-        ctx.alloc.free(rm_dir_cmd);
     }
 }
 
@@ -179,16 +168,19 @@ pub fn main(init: std.process.Init) !void {
 
     var tool_name: []const u8 = "samtools";
     var limit: u32 = std.math.maxInt(u32);
+    var dry_run: bool = false;
 
     while (args.next()) |a| {
         if (std.mem.eql(u8, a, "--tool")) {
             tool_name = args.next() orelse return error.MissingTool;
         } else if (std.mem.eql(u8, a, "--limit")) {
             limit = try std.fmt.parseInt(u32, args.next() orelse "0", 10);
+        } else if (std.mem.eql(u8, a, "--dry-run")) {
+            dry_run = true;
         }
     }
 
-    const adapter = try Adapter.fromName(tool_name);
+    const adapter = try ToolAdapter.fromName(tool_name);
     std.debug.print("[muze] tool={s} root={s}\n", .{ adapter.name, adapter.source_root });
 
     // --- Prepare baseline ---
@@ -219,29 +211,58 @@ pub fn main(init: std.process.Init) !void {
     }
 
 
-    std.debug.print("[muze] copying source tree -> {s}\n", .{runs_baseline.items});
-    try sandbox.copyTree(alloc, io, adapter.source_root, runs_baseline.items);
+    var skip_baseline = false;
+    var test_file = std.ArrayList(u8).empty;
+    defer test_file.deinit(alloc);
+    try test_file.appendSlice(alloc, runs_baseline.items);
+    if (std.mem.eql(u8, adapter.name, "gromacs") or std.mem.eql(u8, adapter.name, "iqtree") or std.mem.eql(u8, adapter.name, "raxml")) {
+        try test_file.appendSlice(alloc, "/build/compile_commands.json");
+    } else if (std.mem.eql(u8, adapter.name, "bwa")) {
+        try test_file.appendSlice(alloc, "/bwa");
+    } else if (std.mem.eql(u8, adapter.name, "kraken2")) {
+        try test_file.appendSlice(alloc, "/bin/classify");
+    } else if (std.mem.eql(u8, adapter.name, "kallisto")) {
+        try test_file.appendSlice(alloc, "/build/src/kallisto");
+    } else if (std.mem.eql(u8, adapter.name, "jellyfish")) {
+        try test_file.appendSlice(alloc, "/bin/.libs/jellyfish");
+    } else if (std.mem.eql(u8, adapter.name, "foldseek")) {
+        try test_file.appendSlice(alloc, "/build/src/foldseek");
+    } else if (std.mem.eql(u8, adapter.name, "salmon")) {
+        try test_file.appendSlice(alloc, "/target/debug/salmon");
+    } else {
+        try test_file.appendSlice(alloc, "/samtools");
+    }
+    if (cwd.statFile(io, test_file.items, .{})) |_| {
+        skip_baseline = true;
+    } else |_| {}
 
-    // --- Baseline build + smoke ---
-    var base_stdout = std.ArrayList(u8).empty;
-    defer base_stdout.deinit(alloc);
-    try base_stdout.appendSlice(alloc, runs_baseline.items);
-    try base_stdout.appendSlice(alloc, "/build.stdout");
+    if (!skip_baseline) {
+        std.debug.print("[muze] copying source tree -> {s}\n", .{runs_baseline.items});
+        try sandbox.copyTree(alloc, io, adapter.source_root, runs_baseline.items);
 
-    var base_stderr = std.ArrayList(u8).empty;
-    defer base_stderr.deinit(alloc);
-    try base_stderr.appendSlice(alloc, runs_baseline.items);
-    try base_stderr.appendSlice(alloc, "/build.stderr");
+        // --- Baseline build + smoke ---
+        var base_stdout = std.ArrayList(u8).empty;
+        defer base_stdout.deinit(alloc);
+        try base_stdout.appendSlice(alloc, runs_baseline.items);
+        try base_stdout.appendSlice(alloc, "/build.stdout");
 
-    std.debug.print("[muze] baseline build: {s}\n", .{adapter.build_cmd});
-    const br = try sandbox.exec(
-        alloc, io, adapter.build_cmd, runs_baseline.items,
-        adapter.build_timeout_s, base_stdout.items, base_stderr.items,
-    );
-    if (br.timed_out or br.exit_code != 0) {
-        std.debug.print("[muze] baseline build FAILED (exit={d}, sig={d}, timeout={})\n",
-            .{ br.exit_code, br.signal, br.timed_out });
-        return error.BaselineBuildFailed;
+        var base_stderr = std.ArrayList(u8).empty;
+        defer base_stderr.deinit(alloc);
+        try base_stderr.appendSlice(alloc, runs_baseline.items);
+        try base_stderr.appendSlice(alloc, "/build.stderr");
+
+        std.debug.print("[muze] baseline build: {s}\n", .{adapter.baseline_build_cmd});
+        const br = try sandbox.exec(
+            alloc, io, adapter.baseline_build_cmd, runs_baseline.items,
+            adapter.build_timeout_s, base_stdout.items, base_stderr.items,
+        );
+        if (br.timed_out or br.exit_code != 0) {
+            std.debug.print("[muze] baseline build FAILED (exit={d}, sig={d}, timeout={})\n",
+                .{ br.exit_code, br.signal, br.timed_out });
+            return error.BaselineBuildFailed;
+        }
+    } else {
+        std.debug.print("[muze] baseline already built at {s}, skipping baseline build\n", .{runs_baseline.items});
     }
 
     // --- Parse target files, find matches ---
@@ -309,12 +330,36 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
-    std.debug.print("[muze] total matches: {d}\n", .{all_matches.items.len});
+    var bio_count: usize = 0;
+    var gen_count: usize = 0;
+    for (all_matches.items) |entry| {
+        if (registry.all[entry.op_idx].class == .bio) {
+            bio_count += 1;
+        } else {
+            gen_count += 1;
+        }
+    }
+    std.debug.print("[muze] total matches: {d} (bio: {d}, generic: {d})\n", .{ all_matches.items.len, bio_count, gen_count });
+    if (dry_run) {
+        var op_counts = [_]usize{0} ** registry.all.len;
+        for (all_matches.items) |entry| {
+            op_counts[entry.op_idx] += 1;
+        }
+        std.debug.print("--- Operator Breakdown ---\n", .{});
+        for (registry.all, 0..) |op, oi| {
+            if (op_counts[oi] > 0) {
+                std.debug.print("{s} [{s}]: {d}\n", .{ op.name, @tagName(op.class), op_counts[oi] });
+            }
+        }
+        return;
+    }
 
-    // --- Generate and run mutants ---
-    const cpu_count: usize = 8;
-    var workers: [8]std.Thread = undefined;
-    var results: [8]WorkerResult = undefined;
+        // --- Generate and run mutants ---
+    const cpu_count: usize = adapter.max_workers;
+    var workers = try alloc.alloc(std.Thread, cpu_count);
+    defer alloc.free(workers);
+    var results = try alloc.alloc(WorkerResult, cpu_count);
+    defer alloc.free(results);
 
     if (limit != std.math.maxInt(u32) and all_matches.items.len > limit) {
         all_matches.items.len = limit;
@@ -345,6 +390,7 @@ pub fn main(init: std.process.Init) !void {
             .alloc = alloc,
             .io = io,
             .adapter = adapter,
+            .worker_id = i,
             .runs_root = runs_root.items,
             .runs_baseline = runs_baseline.items,
             .matches_chunk = all_matches.items.ptr[start..end],
@@ -356,6 +402,7 @@ pub fn main(init: std.process.Init) !void {
         
         workers[i] = std.Thread.spawn(.{}, workerMain, .{ctx}) catch unreachable;
     }
+
 
     var records = std.ArrayList(json_report.MutantRecord).empty;
     defer records.deinit(alloc);
