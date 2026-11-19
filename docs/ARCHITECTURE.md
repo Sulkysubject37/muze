@@ -43,6 +43,17 @@ Rather than relying on brittle regular expressions or slow compiler plugins, MUZ
 - **C++:** `vendor/tree-sitter-cpp`
 - **Rust:** `vendor/tree-sitter-rust`
 
+### Hermetic Vendoring of Tree-sitter Runtimes (`vendor/`)
+
+To guarantee completely hermetic, reproducible builds across arbitrary host operating systems, MUZE avoids system shared library dependencies (`libtree-sitter.so` or `libtree-sitter.dylib`) and dynamic package managers (`npm`, `cargo`). Instead, the pre-generated ANSI C parser source files and headers are vendored directly in `vendor/`:
+- `vendor/tree-sitter/lib/include/`: C API headers (`tree_sitter/api.h`).
+- `vendor/tree-sitter/lib/src/`: Core C parser engine (`lib.c` unity build).
+- `vendor/tree-sitter-c/src/`: Pre-generated C grammar table (`parser.c`).
+- `vendor/tree-sitter-cpp/src/`: Pre-generated C++ grammar tables (`parser.c`, `scanner.c`).
+- `vendor/tree-sitter-rust/src/`: Pre-generated Rust grammar tables (`parser.c`, `scanner.c`).
+
+Zig's native build system (`build.zig`) compiles these C files directly using Zig's embedded C compiler. All non-essential upstream development tooling (CLI crates, test suites, WASM/Node bindings) has been pruned, keeping the vendored footprint self-contained and minimal (~1.8 MB). See [`vendor/README.md`](../vendor/README.md) for provenance details and grammar update procedures.
+
 ### AST Lowering Mechanism (`src/ir/lower.zig`, `src/ts/runtime.zig`)
 
 1. **Tree Generation:** Source files are ingested into memory buffers and lowered into an immutable AST structure (`ts.ts_parser_parse_string`).

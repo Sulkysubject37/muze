@@ -46,6 +46,19 @@ Across ten production bioinformatics software systems representing foundational 
 
 ---
 
+## Hermetic Build & Vendored Parsers (`vendor/`)
+
+MUZE is engineered as a **zero-dependency, hermetic systems framework**. Rather than requiring developers to install `tree-sitter-cli`, Node.js, npm, or system shared libraries (`libtree-sitter`), MUZE vendors the pre-generated ANSI C Tree-sitter runtime and parser tables directly in [`vendor/`](vendor/README.md):
+
+- `vendor/tree-sitter/lib/`: Core C runtime parser engine (`lib.c` unity build and `api.h`).
+- `vendor/tree-sitter-c/src/`: Pre-generated C grammar table (`parser.c`).
+- `vendor/tree-sitter-cpp/src/`: Pre-generated C++ grammar tables (`parser.c`, `scanner.c`).
+- `vendor/tree-sitter-rust/src/`: Pre-generated Rust grammar tables (`parser.c`, `scanner.c`).
+
+Zig's native build system (`build.zig`) compiles these C files directly using Zig's embedded C compiler. All non-essential upstream development tooling (CLI crates, test suites, WASM/Node bindings) has been pruned, keeping the repository minimal and completely self-contained. See [`vendor/README.md`](vendor/README.md) for provenance and grammar update procedures.
+
+---
+
 ## Quickstart
 
 ### 1. Build the Binary
