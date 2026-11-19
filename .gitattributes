@@ -1,0 +1,7 @@
+# GitHub Linguist Overrides
+# Exclude vendored Tree-sitter parsers from repository language stats
+vendor/** linguist-vendored
+external/** linguist-vendored
+
+# Exclude aggregator and build scripts from language stats
+scripts/** linguist-documentation
