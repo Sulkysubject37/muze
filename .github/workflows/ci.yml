@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build & Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            experimental: false
+          - os: macos-latest
+            experimental: false
+          - os: windows-latest
+            experimental: true
+
+    steps:
+      - name: Configure Git Line Endings
+        run: git config --global core.autocrlf false
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Zig Compiler
+        uses: mlugg/setup-zig@v1
+        with:
+          version: master
+
+      - name: Verify Code Formatting
+        shell: bash
+        run: zig fmt --check src/ build.zig
+
+      - name: Build Optimized MUZE Binary
+        shell: bash
+        run: zig build -Doptimize=ReleaseFast --summary all
+
+      - name: Verify Executable CLI Boot
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ./zig-out/bin/muze.exe --help
+          else
+            ./zig-out/bin/muze --help
+          fi
+
+      - name: Run Core Algorithm Dual-Oracle Tests
+        shell: bash
+        run: zig test src/sandbox_safe.zig -lc -I vendor/tree-sitter/lib/include

@@ -1,6 +1,6 @@
 # MUZE: Mutator Utility for Zero-memory-fault Evaluations
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
+[![CI](https://github.com/Sulkysubject37/muze/actions/workflows/ci.yml/badge.svg)](https://github.com/Sulkysubject37/muze/actions/workflows/ci.yml)
 [![Language](https://img.shields.io/badge/language-Zig%200.16-orange.svg)]()
 [![Target Paradigms](https://img.shields.io/badge/paradigms-10%20Bioinformatics%20Systems-blue.svg)]()
 [![License](https://img.shields.io/badge/license-Academic%20Research-lightgrey.svg)]()

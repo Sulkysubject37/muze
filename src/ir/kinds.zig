@@ -1,3 +1,4 @@
+// Created by Sulkysubject37
 pub const Kind = enum(u8) {
     fn_decl,
     binary_op,
