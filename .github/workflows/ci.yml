@@ -30,10 +30,42 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Zig Compiler
-        uses: mlugg/setup-zig@v1
-        with:
-          version: 0.16.0
+      - name: Install Official Zig 0.16.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIG_VERSION="0.16.0"
+          ZIG_DIR="$RUNNER_TEMP/zig"
+          mkdir -p "$ZIG_DIR"
+
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "arm64" ]; then ARCH="aarch64"; fi
+
+          case "$RUNNER_OS" in
+            Linux)
+              FILE="zig-${ARCH}-linux-${ZIG_VERSION}.tar.xz"
+              ;;
+            macOS)
+              FILE="zig-${ARCH}-macos-${ZIG_VERSION}.tar.xz"
+              ;;
+            Windows)
+              FILE="zig-x86_64-windows-${ZIG_VERSION}.zip"
+              ;;
+            *)
+              echo "Unsupported OS: $RUNNER_OS"
+              exit 1
+              ;;
+          esac
+
+          URL="https://ziglang.org/download/${ZIG_VERSION}/${FILE}"
+          echo "Fetching Zig ${ZIG_VERSION} from: ${URL}"
+          curl -fL --retry 3 --retry-delay 2 "$URL" -o "$RUNNER_TEMP/${FILE}"
+
+          echo "Extracting ${FILE} into ${ZIG_DIR}..."
+          tar -xf "$RUNNER_TEMP/${FILE}" -C "$ZIG_DIR" --strip-components=1
+
+          echo "$ZIG_DIR" >> "$GITHUB_PATH"
+          "$ZIG_DIR/zig" version
 
       - name: Verify Code Formatting
         shell: bash
