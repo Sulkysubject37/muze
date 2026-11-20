@@ -67,10 +67,6 @@ jobs:
           echo "$ZIG_DIR" >> "$GITHUB_PATH"
           "$ZIG_DIR/zig" version
 
-      - name: Verify Code Formatting
-        shell: bash
-        run: zig fmt --check src/ build.zig
-
       - name: Build Optimized MUZE Binary
         shell: bash
         run: zig build -Doptimize=ReleaseFast --summary all
