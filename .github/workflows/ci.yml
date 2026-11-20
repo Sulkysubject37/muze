@@ -62,7 +62,12 @@ jobs:
           curl -fL --retry 3 --retry-delay 2 "$URL" -o "$RUNNER_TEMP/${FILE}"
 
           echo "Extracting ${FILE} into ${ZIG_DIR}..."
-          tar -xf "$RUNNER_TEMP/${FILE}" -C "$ZIG_DIR" --strip-components=1
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z x "$RUNNER_TEMP/${FILE}" -o"$RUNNER_TEMP/extracted" -y
+            mv "$RUNNER_TEMP/extracted/zig-x86_64-windows-${ZIG_VERSION}/"* "$ZIG_DIR/"
+          else
+            tar -xf "$RUNNER_TEMP/${FILE}" -C "$ZIG_DIR" --strip-components=1
+          fi
 
           echo "$ZIG_DIR" >> "$GITHUB_PATH"
           "$ZIG_DIR/zig" version

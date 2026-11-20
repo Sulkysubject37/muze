@@ -171,7 +171,20 @@ pub fn main(init: std.process.Init) !void {
     var dry_run: bool = false;
 
     while (args.next()) |a| {
-        if (std.mem.eql(u8, a, "--tool")) {
+        if (std.mem.eql(u8, a, "--help") or std.mem.eql(u8, a, "-h")) {
+            std.debug.print(
+                \\MUZE: Domain-Specific Mutation Testing for Bioinformatics Software
+                \\Usage: muze [options]
+                \\
+                \\Options:
+                \\  --tool <name>    Target bioinformatics tool (e.g. samtools, salmon, foldseek)
+                \\  --limit <N>      Limit execution to N mutants
+                \\  --dry-run        Scan AST and print mutant matches without executing
+                \\  -h, --help       Print this help message and exit
+                \\
+            , .{});
+            return;
+        } else if (std.mem.eql(u8, a, "--tool")) {
             tool_name = args.next() orelse return error.MissingTool;
         } else if (std.mem.eql(u8, a, "--limit")) {
             limit = try std.fmt.parseInt(u32, args.next() orelse "0", 10);

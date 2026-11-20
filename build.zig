@@ -29,7 +29,13 @@ pub fn build(b: *std.Build) void {
             "vendor/tree-sitter-rust/src/parser.c",
             "vendor/tree-sitter-rust/src/scanner.c",
         },
-        .flags = &.{ "-std=c11", "-O2", "-fno-sanitize=undefined" },
+        .flags = &.{
+            "-std=c11",
+            "-O2",
+            "-fno-sanitize=undefined",
+            "-D_DEFAULT_SOURCE",
+            "-D_POSIX_C_SOURCE=200809L",
+        },
     });
 
     b.installArtifact(exe);
